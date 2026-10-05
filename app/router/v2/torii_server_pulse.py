@@ -66,6 +66,7 @@ from app.database.score_token import ScoreToken
 from app.database.user import User, UserModel
 from app.dependencies.database import Database, get_redis, with_db
 from app.log import logger
+from app.service.cache_build_service import cache_build_lock
 
 from .router import router
 
@@ -157,17 +158,25 @@ async def get_server_pulse(session: Database) -> dict[str, Any]:
     except Exception:
         pass
 
-    snapshot = await _compute_pulse_snapshot(session, redis)
+    async with cache_build_lock(redis, _PULSE_CACHE_KEY):
+        try:
+            cached = await redis.get(_PULSE_CACHE_KEY)
+            if cached:
+                return json.loads(cached)
+        except Exception:
+            logger.debug("Pulse cache recheck failed")
 
-    # Cache write is best-effort. If Redis is down or hiccups, we
-    # already have a valid snapshot to return — no point failing the
-    # request just because the next caller will recompute.
-    try:
-        await redis.set(_PULSE_CACHE_KEY, json.dumps(snapshot), ex=_PULSE_CACHE_TTL_SECONDS)
-    except Exception:
-        pass
+        snapshot = await _compute_pulse_snapshot(session, redis)
 
-    return snapshot
+        # Cache write is best-effort. If Redis is down or hiccups, we
+        # already have a valid snapshot to return — no point failing the
+        # request just because the next caller will recompute.
+        try:
+            await redis.set(_PULSE_CACHE_KEY, json.dumps(snapshot), ex=_PULSE_CACHE_TTL_SECONDS)
+        except Exception:
+            pass
+
+        return snapshot
 
 
 async def refresh_pulse_cache() -> None:
@@ -184,9 +193,12 @@ async def refresh_pulse_cache() -> None:
     """
     try:
         redis = get_redis()
-        async with with_db() as session:
-            snapshot = await _compute_pulse_snapshot(session, redis)
-        await redis.set(_PULSE_CACHE_KEY, json.dumps(snapshot), ex=_PULSE_CACHE_TTL_SECONDS)
+        async with cache_build_lock(redis, _PULSE_CACHE_KEY):
+            if await redis.ttl(_PULSE_CACHE_KEY) > 4:
+                return
+            async with with_db() as session:
+                snapshot = await _compute_pulse_snapshot(session, redis)
+            await redis.set(_PULSE_CACHE_KEY, json.dumps(snapshot), ex=_PULSE_CACHE_TTL_SECONDS)
     except Exception as e:
         logger.error(f"Pulse cache refresh failed: {e}")
 

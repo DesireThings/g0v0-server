@@ -18,6 +18,7 @@ from app.database.statistics import active_cutoff
 from app.log import log
 from app.models.mods import mods_can_get_pp
 from app.models.score import GameMode
+from app.service.cache_build_service import cache_build_lock
 from app.utils import safe_json_dumps
 
 from redis.asyncio import Redis
@@ -98,6 +99,7 @@ async def _breaker_anotar_exito(redis: Redis) -> None:
         pass
 PP_DEV_RECALC_TOP_SCORE_LIMIT = 100
 PP_DEV_RANKING_RECALC_USER_LIMIT = 50
+_snapshot_rebuild_tasks: dict[GameMode, asyncio.Task[None]] = {}
 PP_DEV_CALC_BATCH_CONCURRENCY = 3
 PP_DEV_PROFILE_SNAPSHOT_TIMEOUT_SECONDS = 6.0
 
@@ -388,49 +390,59 @@ async def get_pp_dev_ranking_snapshot(
         except json.JSONDecodeError:
             pass
 
-    rows = (
-        await session.exec(
-            select(UserStatistics.user_id, UserStatistics.ranked_score, UserStatistics.pp, User.country_code)
-            .join(User, col(User.id) == col(UserStatistics.user_id))
-            .where(
-                col(UserStatistics.mode) == ruleset,
-                col(UserStatistics.is_ranked).is_(True),
-                ~User.is_restricted_query(col(UserStatistics.user_id)),
-                # Active-only ranking: 30d+ inactive drop out of the pp_dev
-                # snapshot so the array-index rank renumbers densely.
-                col(UserStatistics.last_played) >= active_cutoff(),
+    async with cache_build_lock(redis, cache_key):
+        cached = await redis.get(cache_key)
+        if cached:
+            try:
+                payload = json.loads(cached)
+                if isinstance(payload, list):
+                    return payload
+            except json.JSONDecodeError:
+                pass
+
+        rows = (
+            await session.exec(
+                select(UserStatistics.user_id, UserStatistics.ranked_score, UserStatistics.pp, User.country_code)
+                .join(User, col(User.id) == col(UserStatistics.user_id))
+                .where(
+                    col(UserStatistics.mode) == ruleset,
+                    col(UserStatistics.is_ranked).is_(True),
+                    ~User.is_restricted_query(col(UserStatistics.user_id)),
+                    # Active-only ranking: 30d+ inactive drop out of the pp_dev
+                    # snapshot so the array-index rank renumbers densely.
+                    col(UserStatistics.last_played) >= active_cutoff(),
+                )
             )
-        )
-    ).all()
+        ).all()
 
-    rows = sorted(rows, key=lambda row: (float(row[2] or 0.0), int(row[1] or 0), int(row[0])), reverse=True)
+        rows = sorted(rows, key=lambda row: (float(row[2] or 0.0), int(row[1] or 0), int(row[0])), reverse=True)
 
-    snapshot: list[dict[str, Any]] = []
-    for index, (user_id, ranked_score, _stable_pp, country_code) in enumerate(rows):
-        pp_value, hit_accuracy = await get_user_pp_variant_statistics(
-            session=session,
-            user_id=int(user_id),
-            mode=ruleset,
-            pp_variant="pp_dev",
-            redis=redis,
-            fetcher=fetcher,
-            recalculate_top_scores=index < PP_DEV_RANKING_RECALC_USER_LIMIT,
-        )
-        if pp_value <= 0:
-            continue
-        snapshot.append(
-            {
-                "user_id": int(user_id),
-                "pp": float(pp_value),
-                "hit_accuracy": float(hit_accuracy),
-                "ranked_score": int(ranked_score or 0),
-                "country_code": str(country_code or "").upper(),
-            }
-        )
+        snapshot: list[dict[str, Any]] = []
+        for index, (user_id, ranked_score, _stable_pp, country_code) in enumerate(rows):
+            pp_value, hit_accuracy = await get_user_pp_variant_statistics(
+                session=session,
+                user_id=int(user_id),
+                mode=ruleset,
+                pp_variant="pp_dev",
+                redis=redis,
+                fetcher=fetcher,
+                recalculate_top_scores=index < PP_DEV_RANKING_RECALC_USER_LIMIT,
+            )
+            if pp_value <= 0:
+                continue
+            snapshot.append(
+                {
+                    "user_id": int(user_id),
+                    "pp": float(pp_value),
+                    "hit_accuracy": float(hit_accuracy),
+                    "ranked_score": int(ranked_score or 0),
+                    "country_code": str(country_code or "").upper(),
+                }
+            )
 
-    snapshot.sort(key=lambda row: (row["pp"], row["ranked_score"], row["user_id"]), reverse=True)
-    await redis.set(cache_key, safe_json_dumps(snapshot), ex=RANKING_PP_DEV_CACHE_TTL_SECONDS)
-    return snapshot
+        snapshot.sort(key=lambda row: (row["pp"], row["ranked_score"], row["user_id"]), reverse=True)
+        await redis.set(cache_key, safe_json_dumps(snapshot), ex=RANKING_PP_DEV_CACHE_TTL_SECONDS)
+        return snapshot
 
 
 def apply_pp_variant_to_score_responses(
@@ -561,11 +573,16 @@ async def apply_pp_variant_to_user_response(
                     f"Background pp-dev snapshot rebuild failed for {mode.value}: {bg_err}"
                 )
 
-        try:
-            asyncio.create_task(_rebuild_snapshot_bg())
-        except RuntimeError:
-            # No running loop in some test contexts; safe to ignore.
-            pass
+        task = _snapshot_rebuild_tasks.get(mode)
+        if task is None or task.done():
+            task = asyncio.create_task(_rebuild_snapshot_bg())
+            _snapshot_rebuild_tasks[mode] = task
+
+            def clear_rebuild(finished: asyncio.Task[None]) -> None:
+                if _snapshot_rebuild_tasks.get(mode) is finished:
+                    _snapshot_rebuild_tasks.pop(mode, None)
+
+            task.add_done_callback(clear_rebuild)
 
     if snapshot:
         global_rank, country_rank = get_user_ranks_from_snapshot(
