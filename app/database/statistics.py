@@ -127,26 +127,31 @@ class UserStatisticsModel(DatabaseModel[UserStatisticsDict]):
 
     @included
     @staticmethod
-    async def global_rank_percent(session: AsyncSession, statistics: "UserStatistics") -> float | None:
-        from .user import User
-
+    async def global_rank_percent(
+        session: AsyncSession,
+        statistics: "UserStatistics",
+        rank_population: dict[GameMode, int] | None = None,
+    ) -> float | None:
         rank = await get_rank(session, statistics)
         if rank is None:
             return None
-        total = (
-            await session.exec(
-                select(func.count()).where(
-                    UserStatistics.mode == statistics.mode,
-                    UserStatistics.pp > 0,
-                    col(UserStatistics.is_ranked).is_(True),
-                    col(UserStatistics.user).has(is_active=True),
-                    ~User.is_restricted_query(col(UserStatistics.user_id)),
-                    # Same active-only population as get_rank, so the percentile
-                    # denominator matches the rank numerator.
-                    col(UserStatistics.last_played) >= active_cutoff(),
+        population = rank_population if rank_population is not None else {}
+        if statistics.mode not in population:
+            from .user import User
+
+            population[statistics.mode] = (
+                await session.exec(
+                    select(func.count()).where(
+                        UserStatistics.mode == statistics.mode,
+                        UserStatistics.pp > 0,
+                        col(UserStatistics.is_ranked).is_(True),
+                        col(UserStatistics.user).has(is_active=True),
+                        ~User.is_restricted_query(col(UserStatistics.user_id)),
+                        col(UserStatistics.last_played) >= active_cutoff(),
+                    )
                 )
-            )
-        ).one()
+            ).one()
+        total = population[statistics.mode]
         if total == 0:
             return None
         return rank / max(total, UserStatisticsModel._VIRTUAL_MIN_POPULATION)

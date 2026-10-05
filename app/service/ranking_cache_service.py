@@ -10,12 +10,13 @@ from typing import TYPE_CHECKING, Literal
 
 from app.config import settings
 from app.const import NEW_SCORE_FORMAT_VER
+from app.database import User
 from app.database.statistics import UserStatistics, UserStatisticsModel, active_cutoff
 from app.helpers.asset_proxy_helper import replace_asset_urls
 from app.log import logger
 from app.models.score import GameMode
 from app.utils import safe_json_dumps, utcnow
-from sqlalchemy import and_, func, literal_column, or_
+from sqlalchemy import and_, func, literal_column, or_, select as sa_select
 from app.database.user_account_history import (
     UserAccountHistory,
     UserAccountHistoryType,
@@ -48,6 +49,42 @@ def _user_is_currently_restricted_expr():
 
 
 
+async def get_country_ranking_totals(session: AsyncSession, ruleset: GameMode) -> list[dict]:
+    rows = (
+        await session.execute(
+            sa_select(
+                col(User.country_code),
+                func.count(),
+                func.sum(col(UserStatistics.play_count)),
+                func.sum(col(UserStatistics.ranked_score)),
+                func.sum(col(UserStatistics.pp)),
+            )
+            .select_from(UserStatistics)
+            .join(User, col(User.id) == col(UserStatistics.user_id))
+            .where(
+                col(UserStatistics.mode) == ruleset,
+                col(UserStatistics.pp) > 0,
+                col(User.country_code).is_not(None),
+                col(User.country_code) != "",
+                col(User.is_active).is_(True),
+                ~User.is_restricted_query(col(User.id)),
+            )
+            .group_by(col(User.country_code))
+            .order_by(col(User.country_code))
+        )
+    ).all()
+    return [
+        {
+            "code": country,
+            "active_users": int(count),
+            "play_count": int(play_count),
+            "ranked_score": int(ranked_score),
+            "performance": round(pp),
+        }
+        for country, count, play_count, ranked_score, pp in rows
+    ]
+
+
 class RankingCacheService:
     """用户排行榜缓存服务"""
 
@@ -65,7 +102,7 @@ class RankingCacheService:
     ) -> str:
         """生成缓存键"""
         country_part = f":{country.upper()}" if country else ""
-        return f"ranking:{ruleset}:{type}{country_part}:page:{page}"
+        return f"ranking:{ruleset}:{type}{country_part}:page:{page}:v2"
 
     def _get_stats_cache_key(
         self,
@@ -77,9 +114,11 @@ class RankingCacheService:
         country_part = f":{country.upper()}" if country else ""
         return f"ranking:stats:{ruleset}:{type}{country_part}"
 
-    def _get_country_cache_key(self, ruleset: GameMode, page: int = 1) -> str:
+    def _get_country_cache_key(
+        self, ruleset: GameMode, page: int = 1, sort: Literal["performance", "score"] = "performance"
+    ) -> str:
         """生成地区排行榜缓存键"""
-        return f"country_ranking:{ruleset}:page:{page}"
+        return f"country_ranking:{ruleset}:{sort}:page:{page}:v2"
 
     def _get_country_stats_cache_key(self, ruleset: GameMode) -> str:
         """生成地区排行榜统计信息缓存键"""
@@ -173,10 +212,12 @@ class RankingCacheService:
         self,
         ruleset: GameMode,
         page: int = 1,
+        *,
+        sort: Literal["performance", "score"] = "performance",
     ) -> list[dict] | None:
         """获取缓存的地区排行榜数据"""
         try:
-            cache_key = self._get_country_cache_key(ruleset, page)
+            cache_key = self._get_country_cache_key(ruleset, page, sort)
             cached_data = await self.redis.get(cache_key)
 
             if cached_data:
@@ -192,10 +233,12 @@ class RankingCacheService:
         ranking_data: list[dict],
         page: int = 1,
         ttl: int | None = None,
+        *,
+        sort: Literal["performance", "score"] = "performance",
     ) -> None:
         """缓存地区排行榜数据"""
         try:
-            cache_key = self._get_country_cache_key(ruleset, page)
+            cache_key = self._get_country_cache_key(ruleset, page, sort)
             if ttl is None:
                 ttl = settings.ranking_cache_expire_minutes * 60
             await self.redis.set(cache_key, safe_json_dumps(ranking_data), ex=ttl)
@@ -438,6 +481,8 @@ class RankingCacheService:
             # 缓存统计信息
             await self.cache_stats(ruleset, type, stats, country)
 
+            rank_population: dict[GameMode, int] = {}
+
             # 分页缓存数据
             for page in range(1, max_pages + 1):
                 try:
@@ -457,6 +502,7 @@ class RankingCacheService:
                             statistics,
                             includes=include,
                             show_nsfw_media=True,
+                            rank_population=rank_population,
                         )
 
                         user_dict = user_stats_resp
@@ -540,48 +586,7 @@ class RankingCacheService:
         try:
             logger.info(f"Starting country ranking cache refresh for {ruleset}")
 
-            # 获取所有国家
-            from app.database import User
-
-            countries = (await session.exec(select(User.country_code).distinct())).all()
-
-            # 计算每个国家的统计数据
-            country_stats_list = []
-            for country in countries:
-                if not country:  # 跳过空的国家代码
-                    continue
-
-                statistics = (
-                    await session.exec(
-                        select(UserStatistics).where(
-                            UserStatistics.mode == ruleset,
-                            UserStatistics.pp > 0,
-                            col(UserStatistics.user).has(country_code=country),
-                            col(UserStatistics.user).has(is_active=True),
-                        )
-                    )
-                ).all()
-
-                if not statistics:  # 跳过没有数据的国家
-                    continue
-
-                pp = 0
-                country_stats = {
-                    "code": country,
-                    "active_users": 0,
-                    "play_count": 0,
-                    "ranked_score": 0,
-                    "performance": 0,
-                }
-
-                for stat in statistics:
-                    country_stats["active_users"] += 1
-                    country_stats["play_count"] += stat.play_count
-                    country_stats["ranked_score"] += stat.ranked_score
-                    pp += stat.pp
-
-                country_stats["performance"] = round(pp)
-                country_stats_list.append(country_stats)
+            country_stats_list = await get_country_ranking_totals(session, ruleset)
 
             # 按表现分排序
             country_stats_list.sort(key=lambda x: x["performance"], reverse=True)

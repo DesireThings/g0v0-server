@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Annotated, Any, Literal
 
 from app.config import settings
@@ -12,7 +13,7 @@ from app.service.pp_variant_service import (
     get_pp_dev_ranking_snapshot,
     normalize_pp_variant,
 )
-from app.service.ranking_cache_service import get_ranking_cache_service
+from app.service.ranking_cache_service import get_country_ranking_totals, get_ranking_cache_service
 from app.utils import api_doc
 
 from .router import router
@@ -38,6 +39,8 @@ async def _apply_nsfw_policy_to_rankings(
     session: Database,
     ranking_rows: list[dict[str, Any]],
     show_nsfw_media: bool,
+    *,
+    canonical: bool = False,
 ) -> list[dict[str, Any]]:
     users_to_hydrate: set[int] = set()
     for row in ranking_rows:
@@ -60,9 +63,7 @@ async def _apply_nsfw_policy_to_rankings(
                 )
             )
         )
-        # Always hydrate rows that look sanitized/defaulted, regardless of viewer preference.
-        # Viewer-specific NSFW masking is applied afterwards via apply_nsfw_media_policy.
-        if missing_flags or likely_sanitized:
+        if missing_flags or (likely_sanitized and not canonical):
             users_to_hydrate.add(user_id)
 
     hydrate_by_user: dict[int, tuple[str, dict | None, bool, bool]] = {}
@@ -354,7 +355,7 @@ async def get_country_ranking(
     cache_service = get_ranking_cache_service(redis)
 
     # å°è¯•ä»Žç¼“å­˜èŽ·å–æ•°æ®
-    cached_data = await cache_service.get_cached_country_ranking(ruleset, page)
+    cached_data = await cache_service.get_cached_country_ranking(ruleset, page, sort=sort)
 
     if cached_data:
         # ä»Žç¼“å­˜è¿”å›žæ•°æ®
@@ -362,46 +363,10 @@ async def get_country_ranking(
 
     # ç¼“å­˜æœªå‘½ä¸­ï¼Œä»Žæ•°æ®åº“æŸ¥è¯¢
     response = CountryResponse(ranking=[])
-    countries = (await session.exec(select(User.country_code).distinct())).all()
-
-    for country in countries:
-        if not country:  # è·³è¿‡ç©ºçš„å›½å®¶ä»£ç 
-            continue
-
-        statistics = (
-            await session.exec(
-                select(UserStatistics).where(
-                    UserStatistics.mode == ruleset,
-                    UserStatistics.pp > 0,
-                    col(UserStatistics.user).has(country_code=country),
-                    col(UserStatistics.user).has(is_active=True),
-                    ~User.is_restricted_query(col(UserStatistics.user_id)),
-                )
-            )
-        ).all()
-
-        if not statistics:  # è·³è¿‡æ²¡æœ‰æ•°æ®çš„å›½å®¶
-            continue
-
-        pp = 0
-        active_users = 0
-        total_play_count = 0
-        total_ranked_score = 0
-
-        for stat in statistics:
-            active_users += 1
-            total_play_count += stat.play_count
-            total_ranked_score += stat.ranked_score
-            pp += stat.pp
-
-        country_stats = CountryStatistics(
-            code=country,
-            active_users=active_users,
-            play_count=total_play_count,
-            ranked_score=total_ranked_score,
-            performance=round(pp),
-        )
-        response.ranking.append(country_stats)
+    response.ranking = [
+        CountryStatistics.model_validate(item)
+        for item in await get_country_ranking_totals(session, ruleset)
+    ]
 
     if sort == "performance":
         response.ranking.sort(key=lambda x: x.performance, reverse=True)
@@ -426,6 +391,7 @@ async def get_country_ranking(
         cache_data,
         page,
         ttl=settings.ranking_cache_expire_minutes * 60,
+        sort=sort,
     )
 
     # è¿”å›žå½“å‰é¡µçš„ç»“æžœ
@@ -459,6 +425,7 @@ async def get_user_ranking(
 ):
     show_nsfw_media = await UserModel.viewer_allows_nsfw_media(current_user)
     resolved_pp_variant = normalize_pp_variant(pp_variant)
+    rank_population: dict[GameMode, int] = {}
 
     if resolved_pp_variant == "pp_dev":
         redis = get_redis()
@@ -531,6 +498,7 @@ async def get_user_ranking(
                     includes=include,
                     user_country=current_user.country_code,
                     show_nsfw_media=True,
+                    rank_population=rank_population,
                 )
                 user_stats_resp["pp"] = float(row.get("pp") or 0.0)
                 user_stats_resp["hit_accuracy"] = float(row.get("hit_accuracy") or 0.0)
@@ -541,7 +509,7 @@ async def get_user_ranking(
 
                 ranking_data.append(user_stats_resp)
 
-        ranking_data = await _apply_nsfw_policy_to_rankings(session, ranking_data, show_nsfw_media)
+        ranking_data = await _apply_nsfw_policy_to_rankings(session, ranking_data, show_nsfw_media, canonical=True)
         return {
             "ranking": ranking_data,
             "total": total_count,
@@ -556,7 +524,7 @@ async def get_user_ranking(
     cached_stats = await cache_service.get_cached_stats(ruleset, sort, country)
 
     if cached_data and cached_stats:
-        cached_data = await _apply_nsfw_policy_to_rankings(session, cached_data, show_nsfw_media)
+        cached_data = await _apply_nsfw_policy_to_rankings(session, cached_data, show_nsfw_media, canonical=True)
         # ä»Žç¼“å­˜è¿”å›žæ•°æ®
         return {
             "ranking": cached_data,
@@ -615,6 +583,7 @@ async def get_user_ranking(
             includes=include,
             # Cache canonical (unsanitized) payload; apply viewer policy right before response.
             show_nsfw_media=True,
+            rank_population=rank_population,
         )
         ranking_data.append(user_stats_resp)
 
@@ -632,7 +601,7 @@ async def get_user_ranking(
 
     # å¼‚æ­¥ç¼“å­˜æ•°æ®ï¼ˆä¸ç­‰å¾…å®Œæˆï¼‰
     # ä½¿ç”¨é…ç½®æ–‡ä»¶ä¸­çš„TTLè®¾ç½®
-    cache_data = ranking_data
+    cache_data = deepcopy(ranking_data)
     stats_data = {"total": total_count}
 
     # åˆ›å»ºåŽå°ä»»åŠ¡æ¥ç¼“å­˜æ•°æ®
@@ -656,7 +625,7 @@ async def get_user_ranking(
         ttl=settings.ranking_cache_expire_minutes * 60,
     )
 
-    ranking_data = await _apply_nsfw_policy_to_rankings(session, ranking_data, show_nsfw_media)
+    ranking_data = await _apply_nsfw_policy_to_rankings(session, ranking_data, show_nsfw_media, canonical=True)
 
     return {
         "ranking": ranking_data,
