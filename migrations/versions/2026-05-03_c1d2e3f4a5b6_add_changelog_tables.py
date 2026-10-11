@@ -78,7 +78,7 @@ def upgrade() -> None:
         sa.Column("type", sa.String(20), nullable=False, server_default="misc"),
         sa.Column("category", sa.String(20), nullable=False, server_default="other"),
         sa.Column("title", sa.String(500), nullable=False),
-        sa.Column("message_html", sa.Text(), nullable=False, server_default=""),
+        sa.Column("message_html", sa.Text(), nullable=False),
         sa.Column("major", sa.Boolean(), nullable=False, server_default=sa.text("0")),
         sa.Column("github_user", sa.JSON(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
