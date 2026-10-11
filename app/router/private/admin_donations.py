@@ -169,7 +169,7 @@ async def _serialise_donation(session: Database, donation: Donation) -> AdminDon
 @router.get(
     "/admin/donations",
     name="List donations (admin)",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
     response_model=AdminDonationListResp,
 )
 async def list_donations(
@@ -223,7 +223,7 @@ async def list_donations(
 @router.get(
     "/admin/donations/stats",
     name="Donation stats (admin)",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
     response_model=AdminDonationStatsResp,
 )
 async def donation_stats(
@@ -294,7 +294,7 @@ async def donation_stats(
 @router.post(
     "/admin/donations/{donation_id}/match",
     name="Match donation to user (admin)",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
     response_model=MatchDonationResp,
 )
 async def match_donation(

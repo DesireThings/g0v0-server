@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # 创建邮件验证表
+    # Create email verification table
     op.create_table(
         "email_verifications",
         sa.Column("id", sa.Integer(), nullable=False, primary_key=True, autoincrement=True),
@@ -38,7 +38,7 @@ def upgrade() -> None:
         sa.Index("ix_email_verifications_email", "email"),
     )
 
-    # 创建登录会话表
+    # Create login session table
     op.create_table(
         "login_sessions",
         sa.Column("id", sa.Integer(), nullable=False, primary_key=True, autoincrement=True),

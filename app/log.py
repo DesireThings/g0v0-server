@@ -115,23 +115,23 @@ def get_caller_class_name(module_prefix: str = "", just_last_part: bool = True) 
             continue
 
         local_vars = frame_info.frame.f_locals
-        # 实例方法
+        # Instance method
         if "self" in local_vars:
             return local_vars["self"].__class__.__name__
-        # 类方法
+        # Class method
         if "cls" in local_vars:
             return local_vars["cls"].__name__
 
-        # 静态方法 / 普通函数 -> 尝试通过函数名匹配类
+        # Static method / regular function -> try matching class by function name
         func_name = frame_info.function
         for obj_name, obj in frame_info.frame.f_globals.items():
-            if isinstance(obj, type):  # 遍历模块内类
+            if isinstance(obj, type):  # Iterate through classes in module
                 cls = obj
                 attr = getattr(cls, func_name, None)
                 if isinstance(attr, (staticmethod, classmethod, FunctionType)):
                     return cls.__name__
 
-        # 如果没找到类，返回模块名
+        # If no class is found, return module name
         if just_last_part:
             return module.rsplit(".", 1)[-1]
         return module

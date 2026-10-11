@@ -17,26 +17,27 @@ from sqlmodel import col, exists, select
 
 @router.get(
     "/beatmapsets/{beatmapset_id}/can_rate",
-    name="判断用户能否为谱面集打分",
+    name="Check If User Can Rate Beatmapset",
     response_model=bool,
-    tags=["谱面集", "g0v0 API"],
+    tags=["Beatmapsets", "g0v0 API"],
 )
 async def can_rate_beatmapset(
     beatmapset_id: int,
     session: Database,
     current_user: ClientUser,
 ):
-    """检查用户是否可以评价谱面集
+    """Check if user can rate beatmapset
 
-    检查当前用户是否可以对指定的谱面集进行评价
-    参数:
-    - beatmapset_id: 谱面集ID
+    Checks whether the current user is eligible to rate the specified beatmapset.
 
-    错误情况:
-    - 404: 找不到指定谱面集
+    Parameters:
+    - beatmapset_id: Beatmapset ID
 
-    返回:
-    - bool: 用户是否可以评价谱面集
+    Error cases:
+    - 404: Beatmapset not found
+
+    Returns:
+    - bool: Whether the user can rate the beatmapset
     """
     if await current_user.is_restricted(session):
         return False
@@ -54,7 +55,7 @@ async def can_rate_beatmapset(
 
 
 @router.post(
-    "/beatmapsets/{beatmapset_id}/ratings", name="上传对谱面集的打分", status_code=201, tags=["谱面集", "g0v0 API"]
+    "/beatmapsets/{beatmapset_id}/ratings", name="Submit Beatmapset Rating", status_code=201, tags=["Beatmapsets", "g0v0 API"]
 )
 async def rate_beatmaps(
     beatmapset_id: int,
@@ -62,19 +63,19 @@ async def rate_beatmaps(
     rating: Annotated[int, Body(..., ge=0, le=10)],
     current_user: ClientUser,
 ):
-    """为谱面集评分
+    """Rate a beatmapset
 
-    为指定的谱面集添加用户评分，并更新谱面集的评分统计信息
+    Adds a user rating for the specified beatmapset and updates its rating statistics.
 
-    参数:
-    - beatmapset_id: 谱面集ID
-    - rating: 评分
+    Parameters:
+    - beatmapset_id: Beatmapset ID
+    - rating: Rating value
 
-    错误情况:
-    - 404: 找不到指定谱面集
+    Error cases:
+    - 404: Beatmapset not found
 
-    返回:
-    - 成功: None
+    Returns:
+    - Success: None
     """
     if await current_user.is_restricted(session):
         raise HTTPException(status_code=403, detail="Your account is restricted and cannot perform this action.")
@@ -93,33 +94,33 @@ async def rate_beatmaps(
 
 @router.post(
     "/beatmapsets/{beatmapset_id}/sync",
-    name="请求同步谱面集",
+    name="Request Beatmapset Sync",
     status_code=202,
-    tags=["谱面集", "g0v0 API"],
+    tags=["Beatmapsets", "g0v0 API"],
     dependencies=[Depends(RateLimiter(times=50, hours=1))],
 )
 async def sync_beatmapset(
-    beatmapset_id: Annotated[int, Path(..., description="谱面集ID")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
     session: Database,
     current_user: ClientUser,
-    immediate: Annotated[bool, Query(description="是否立即同步")] = False,
+    immediate: Annotated[bool, Query(description="Whether to sync immediately")] = False,
 ):
-    """请求同步谱面集
+    """Request beatmapset synchronization
 
-    请求将指定的谱面集从 Bancho 同步到服务器
+    Requests syncing the specified beatmapset from Bancho to the server.
 
-    默认情况下请求会加入同步队列，等待自动同步。
-    若设置 `immediate=true`，会尝试立刻同步该谱面集。
+    By default, the request joins the synchronization queue for automatic processing.
+    If `immediate=true`, attempts to sync the beatmapset immediately.
 
-    速率限制:
-    - 每个用户每小时最多50次请求
+    Rate limits:
+    - Max 50 requests per hour per user
 
-    参数:
-    - beatmapset_id: 谱面集ID
-    - immediate: 是否立即同步（默认 false）
+    Parameters:
+    - beatmapset_id: Beatmapset ID
+    - immediate: Whether to sync immediately (default false)
 
-    错误情况:
-    - 404: 找不到指定谱面集
+    Error cases:
+    - 404: Beatmapset not found
     """
     current_beatmapset = (await session.exec(select(exists()).where(Beatmapset.id == beatmapset_id))).first()
     if not current_beatmapset:

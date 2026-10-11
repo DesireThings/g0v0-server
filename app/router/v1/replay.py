@@ -25,14 +25,14 @@ class ReplayModel(BaseModel):
 @router.get(
     "/get_replay",
     response_model=ReplayModel,
-    name="获取回放文件",
-    description="获取指定谱面的回放文件。",
+    name="Get Replay File",
+    description="Get the replay file for the specified beatmap.",
     dependencies=[Depends(RateLimiter(times=10, minutes=1))],
 )
 async def download_replay(
     session: Database,
-    beatmap: Annotated[int, Query(..., alias="b", description="谱面 ID")],
-    user: Annotated[str, Query(..., alias="u", description="用户")],
+    beatmap: Annotated[int, Query(..., alias="b", description="Beatmap ID")],
+    user: Annotated[str, Query(..., alias="u", description="User")],
     storage_service: StorageService,
     ruleset_id: Annotated[
         int | None,
@@ -42,9 +42,9 @@ async def download_replay(
             ge=0,
         ),
     ] = None,
-    score_id: Annotated[int | None, Query(alias="s", description="成绩 ID")] = None,
-    type: Annotated[Literal["string", "id"] | None, Query(description="用户类型：string 用户名称 / id 用户 ID")] = None,
-    mods: Annotated[int, Query(description="成绩的 MOD")] = 0,
+    score_id: Annotated[int | None, Query(alias="s", description="Score ID")] = None,
+    type: Annotated[Literal["string", "id"] | None, Query(description="User lookup type: 'string' for username / 'id' for user ID")] = None,
+    mods: Annotated[int, Query(description="Score mods bitmask")] = 0,
 ):
     mods_ = int_to_mods(mods)
     if score_id is not None:

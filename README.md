@@ -7,24 +7,22 @@
 [![license](https://img.shields.io/github/license/GooGuTeam/g0v0-server)](./LICENSE)
 [![discord](https://discordapp.com/api/guilds/1404817877504229426/widget.png?style=shield)](https://discord.gg/AhzJXXWYfF)
 
-简体中文 | [English](./README.en.md)
+This is an osu! API server implemented with FastAPI + MySQL + Redis, supporting most features of osu! API v1, v2, and osu!lazer.
 
-这是一个使用 FastAPI + MySQL + Redis 实现的 osu! API 模拟服务器，支持 osu! API v1, v2 和 osu!lazer 的绝大部分功能。
+## Features
 
-## 功能特性
+-   **OAuth 2.0 Authentication**: Supports password and refresh token flows.
+-   **User Data Management**: Complete user information, statistics, achievements, etc.
+-   **Multi-game Mode Support**: osu! (RX, AP), taiko (RX), catch (RX), mania and custom rulesets (see below).
+-   **Database Persistence**: MySQL for storing user data.
+-   **Cache Support**: Redis for caching tokens and session information.
+-   **Multiple Storage Backends**: Supports local storage, Cloudflare R2, and AWS S3.
+-   **Containerized Deployment**: Docker and Docker Compose support.
+-   **Asset Reverse Proxy**: Allows replacing official osu! asset links (avatars, beatmap covers, audio, etc.) with custom domain names.
 
-- **OAuth 2.0 认证**: 支持密码流和刷新令牌流
-- **用户数据管理**: 完整的用户信息、统计数据、成就等
-- **多游戏模式支持**: osu! (RX, AP), taiko (RX), catch (RX), mania 和自定义 ruleset（见下）
-- **数据库持久化**: MySQL 存储用户数据
-- **缓存支持**: Redis 缓存令牌和会话信息
-- **多种存储后端**: 支持本地存储、Cloudflare R2、AWS S3
-- **容器化部署**: Docker 和 Docker Compose 支持
-- **资源文件反向代理**: 可以将 osu! 官方的资源链接（头像、谱面封面、音频等）替换为自定义域名。
+## Supported Rulesets
 
-## 支持的 ruleset
-
-**Ruleset**|**ID**|**ShortName**|**PP 算法 (rosu)**|**PP 算法 (performance-server)**
+**Ruleset**|**ID**|**ShortName**|**PP Algorithm (rosu)**|**PP Algorithm (performance-server)**
 :-----:|:-----:|:-----:|:-----:|:-----:
 osu!|`0`|`osu`|✅|✅
 osu!taiko|`1`|`taiko`|✅|✅
@@ -40,77 +38,71 @@ osu!catch (RX)|`7`|`fruitsrx`|✅|✅
 [hishigata](https://github.com/LumpBloom7/hishigata)|`13`|`hishigata`|❌|❌
 [soyokaze!](https://github.com/goodtrailer/soyokaze)|`14`|`soyokaze`|❌|✅
 
-前往 [custom-rulesets](https://github.com/GooGuTeam/custom-rulesets/releases/latest) 下载为 g0v0-server 修改的自定义 ruleset。
+Go to [custom-rulesets](https://github.com/GooGuTeam/custom-rulesets) to download the custom rulesets modified for g0v0-server.
 
-## 快速开始
+## Quick Start
 
-### 使用 Docker Compose (推荐)
+### Using Docker Compose (Recommended)
 
-1. 克隆项目
-```bash
-git clone https://github.com/GooGuTeam/g0v0-server.git
-cd g0v0-server
-```
+1.  Clone the project
+    ```bash
+    git clone https://github.com/GooGuTeam/g0v0-server.git
+    cd g0v0-server
+    ```
+2.  Create a `.env` file
 
-2. 创建 `.env` 文件
+    Please see [wiki](https://github.com/GooGuTeam/g0v0-server/wiki/Configuration) to modify the .env file.
+    ```bash
+    cp .env.example .env
+    ```
+3. (Optional) Download rulesets
+    Go to [custom-rulesets](https://github.com/GooGuTeam/custom-rulesets/releases/latest) to download the custom rulesets modified for g0v0-server. Place the downloaded DLLs into the `rulesets/` directory to enable custom ruleset support in the spectator server and performance calculator.
+4.  Start the service
+    ```bash
+    # Standard server
+    docker-compose -f docker-compose.yml up -d
+    # Enable osu!RX and osu!AP statistics (Gu pp algorithm based on ppy-sb pp algorithm)
+    docker-compose -f docker-compose-osurx.yml up -d
+    ```
+5.  Connect to the server from the game
 
-请参考 [wiki](https://github.com/GooGuTeam/g0v0-server/wiki/Configuration) 来修改 `.env` 文件
+    Use a [custom osu!lazer client](https://github.com/GooGuTeam/osu), or use [LazerAuthlibInjection](https://github.com/MingxuanGame/LazerAuthlibInjection), and change the server settings to the server's address.
 
-```bash
-cp .env.example .env
-```
+### Updating the Database
 
-3. （可选）下载 rulesets
+Refer to the [Database Migration Guide](https://github.com/GooGuTeam/g0v0-server/wiki/Migrate-Database)
 
-前往 [custom-rulesets](https://github.com/GooGuTeam/custom-rulesets/releases/latest) 下载为 g0v0-server 修改的自定义 ruleset。将下载的 DLL 放入 `rulesets/` 目录，以在旁观服务器和表现分计算器中启用自定义 ruleset 支持。
+## Security
 
-4. 启动服务
-```bash
-# 标准服务器
-docker-compose -f docker-compose.yml up -d
-# 启用 osu!RX 和 osu!AP 模式 （基于偏偏要上班 pp 算法的 Gu pp 算法）
-docker-compose -f docker-compose-osurx.yml up -d
-```
+Use `openssl rand -hex 32` to generate the JWT secret key to ensure the security of the server and the normal operation of the observer server.
 
-5. 通过游戏连接服务器
+Use `openssl rand -hex 40` to generate the frontend secret key.
 
-使用[自定义的 osu!lazer 客户端](https://github.com/GooGuTeam/osu)，或者使用 [LazerAuthlibInjection](https://github.com/MingxuanGame/LazerAuthlibInjection)，修改服务器设置为服务器的 IP
+**If it is in a public network environment, please block external requests to the `/_lio` path.**
 
-## 更新数据库
+## Documentation
 
-参考[数据库迁移指南](https://github.com/GooGuTeam/g0v0-server/wiki/Migrate-Database)
+Visit the [wiki](https://github.com/GooGuTeam/g0v0-server/wiki) for more information.
 
-## 安全
+## License
 
-使用 `openssl rand -hex 32` 生成 JWT 密钥，以保证服务器安全和旁观服务器的正常运行
-
-使用 `openssl rand -hex 40` 生成前端密钥
-
-**如果是在公网环境下，请屏蔽对 `/_lio` 路径的外部请求**
-
-## 文档
-
-前往 [wiki](https://github.com/GooGuTeam/g0v0-server/wiki) 查看
-
-## 许可证
-
-本项目采用 **GNU Affero General Public License v3.0 (AGPL-3.0-only)** 授权。  
-任何衍生作品、修改或部署 **必须在显著位置清晰署名** 原始作者：  
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0-only)**.  
+Any derivative work, modification, or deployment **MUST clearly and prominently attribute** the original authors:  
 **GooGuTeam - https://github.com/GooGuTeam/g0v0-server**
 
-## 贡献
+## Contributing
 
-项目目前处于快速迭代状态，欢迎提交 Issue 和 Pull Request！
+The project is currently in a state of rapid iteration. Issues and Pull Requests are welcome!
 
-查看 [贡献指南](./CONTRIBUTING.md) 获取更多信息。
+See [Contributing Guide](./CONTRIBUTING.md) for more information.
 
-## 贡献者
+## Contributors
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-5-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-感谢所有参与此项目的贡献者！ ([emoji key](https://allcontributors.org/docs/en/emoji-key))
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -118,9 +110,9 @@ docker-compose -f docker-compose-osurx.yml up -d
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/GooGuJiang"><img src="https://avatars.githubusercontent.com/u/74496778?v=4?s=100" width="100px;" alt="咕谷酱"/><br /><sub><b>咕谷酱</b></sub></a><br /><a href="https://github.com/GooGuTeam/g0v0-server/commits?author=GooGuJiang" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/GooGuJiang"><img src="https://avatars.githubusercontent.com/u/74496778?v=4?s=100" width="100px;" alt="GooGuJiang"/><br /><sub><b>GooGuJiang</b></sub></a><br /><a href="https://github.com/GooGuTeam/g0v0-server/commits?author=GooGuJiang" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://blog.mxgame.top/"><img src="https://avatars.githubusercontent.com/u/68982190?v=4?s=100" width="100px;" alt="MingxuanGame"/><br /><sub><b>MingxuanGame</b></sub></a><br /><a href="https://github.com/GooGuTeam/g0v0-server/commits?author=MingxuanGame" title="Code">💻</a></td>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chenjintang-shrimp"><img src="https://avatars.githubusercontent.com/u/110657724?v=4?s=100" width="100px;" alt="陈晋瑭"/><br /><sub><b>陈晋瑭</b></sub></a><br /><a href="https://github.com/GooGuTeam/g0v0-server/commits?author=chenjintang-shrimp" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/chenjintang-shrimp"><img src="https://avatars.githubusercontent.com/u/110657724?v=4?s=100" width="100px;" alt="chenjintang-shrimp"/><br /><sub><b>chenjintang-shrimp</b></sub></a><br /><a href="https://github.com/GooGuTeam/g0v0-server/commits?author=chenjintang-shrimp" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://4ayo.ovh"><img src="https://avatars.githubusercontent.com/u/115783539?v=4?s=100" width="100px;" alt="4ayo"/><br /><sub><b>4ayo</b></sub></a><br /><a href="#ideas-4aya" title="Ideas, Planning, & Feedback">🤔</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/kyiuu1"><img src="https://avatars.githubusercontent.com/u/188347675?v=4?s=100" width="100px;" alt="kyiuu1"/><br /><sub><b>kyiuu1</b></sub></a><br /><a href="#ideas-kyiuu1" title="Ideas, Planning, & Feedback">🤔</a></td>
     </tr>
@@ -132,9 +124,9 @@ docker-compose -f docker-compose-osurx.yml up -d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-本项目遵循 [all-contributors](https://github.com/all-contributors/all-contributors) 规范。欢迎任何形式的贡献！
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
 
-## 参与讨论
+## Discussion
 
-- QQ 群：`1059561526`
+
 - Discord: https://discord.gg/AhzJXXWYfF

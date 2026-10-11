@@ -11,20 +11,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DownloadEndpoint:
-    """下载端点配置"""
+    """Download endpoint configuration."""
 
     name: str
     base_url: str
     health_check_url: str
-    url_template: str  # 下载URL模板，使用{sid}和{type}占位符
+    url_template: str  # Download URL template, using {sid} and {type} placeholders
     is_china: bool = False
-    priority: int = 0  # 优先级，数字越小优先级越高
-    timeout: int = 10  # 健康检查超时时间（秒）
+    priority: int = 0  # Priority, smaller number means higher priority
+    timeout: int = 10  # Health check timeout in seconds
 
 
 @dataclass
 class EndpointStatus:
-    """端点状态"""
+    """Endpoint status."""
 
     endpoint: DownloadEndpoint
     is_healthy: bool = True
@@ -34,10 +34,10 @@ class EndpointStatus:
 
 
 class BeatmapDownloadService:
-    """谱面下载服务 - 负载均衡和健康检查"""
+    """Beatmap download service - load balancing and health checking."""
 
     def __init__(self):
-        # 中国区域端点
+        # China region endpoints
         self.china_endpoints = [
             DownloadEndpoint(
                 name="Sayobot",
@@ -102,27 +102,27 @@ class BeatmapDownloadService:
             ),
         ]
 
-        # 端点状态跟踪
+        # Endpoint status tracking
         self.endpoint_status: dict[str, EndpointStatus] = {}
         self._initialize_status()
 
-        # 健康检查配置
-        self.health_check_interval = 600  # 健康检查间隔（秒）
-        self.max_consecutive_failures = 3  # 最大连续失败次数
+        # Health check configuration
+        self.health_check_interval = 600  # Health check interval in seconds
+        self.max_consecutive_failures = 3  # Maximum consecutive failures
         self.health_check_running = False
-        self.health_check_task = None  # 存储健康检查任务引用
+        self.health_check_task = None  # Reference to health check task
 
-        # HTTP客户端
+        # HTTP client
         self.http_client = httpx.AsyncClient(timeout=30)
 
     def _initialize_status(self):
-        """初始化端点状态"""
+        """Initialize endpoint statuses."""
         all_endpoints = self.china_endpoints + self.international_endpoints
         for endpoint in all_endpoints:
             self.endpoint_status[endpoint.name] = EndpointStatus(endpoint=endpoint)
 
     async def start_health_check(self):
-        """启动健康检查任务"""
+        """Start health check task."""
         if self.health_check_running:
             return
 
@@ -131,26 +131,26 @@ class BeatmapDownloadService:
         logger.info("Beatmap download service health check started")
 
     async def stop_health_check(self):
-        """停止健康检查任务"""
+        """Stop health check task."""
         self.health_check_running = False
         await self.http_client.aclose()
         logger.info("Beatmap download service health check stopped")
 
     async def _health_check_loop(self):
-        """健康检查循环"""
+        """Health check loop."""
         while self.health_check_running:
             try:
                 await self._check_all_endpoints()
                 await asyncio.sleep(self.health_check_interval)
             except Exception as e:
                 logger.error(f"Health check loop error: {e}")
-                await asyncio.sleep(5)  # 错误时短暂等待
+                await asyncio.sleep(5)  # Brief wait on error
 
     async def _check_all_endpoints(self):
-        """检查所有端点的健康状态"""
+        """Check health status of all endpoints."""
         all_endpoints = self.china_endpoints + self.international_endpoints
 
-        # 并发检查所有端点
+        # Concurrently check all endpoints
         tasks = []
         for endpoint in all_endpoints:
             task = asyncio.create_task(self._check_endpoint_health(endpoint))
@@ -159,20 +159,20 @@ class BeatmapDownloadService:
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _check_endpoint_health(self, endpoint: DownloadEndpoint):
-        """检查单个端点的健康状态"""
+        """Check health status of a single endpoint."""
         status = self.endpoint_status[endpoint.name]
 
         try:
             async with httpx.AsyncClient(timeout=endpoint.timeout) as client:
                 response = await client.get(endpoint.health_check_url)
 
-                # 根据不同端点类型判断健康状态
+                # Determine health status based on endpoint response
                 is_healthy = False
                 # 200, 302 (redirect), 304 (not modified) all indicate a live endpoint
                 is_healthy = response.status_code in [200, 302, 304]
 
                 if is_healthy:
-                    # 健康检查成功
+                    # Health check succeeded
                     if not status.is_healthy:
                         logger.info(f"Endpoint {endpoint.name} is now healthy")
 
@@ -187,7 +187,7 @@ class BeatmapDownloadService:
                     )
 
         except Exception as e:
-            # 健康检查失败
+            # Health check failed
             status.consecutive_failures += 1
             status.last_error = str(e)
 
@@ -203,7 +203,7 @@ class BeatmapDownloadService:
             status.last_check = datetime.now()
 
     def get_healthy_endpoints(self, is_china: bool) -> list[DownloadEndpoint]:
-        """获取健康的端点列表"""
+        """Get list of healthy endpoints."""
         endpoints = self.china_endpoints if is_china else self.international_endpoints
 
         healthy_endpoints = []
@@ -212,25 +212,25 @@ class BeatmapDownloadService:
             if status.is_healthy:
                 healthy_endpoints.append(endpoint)
 
-        # 按优先级排序
+        # Sort by priority
         healthy_endpoints.sort(key=lambda x: x.priority)
         return healthy_endpoints
 
     def _get_endpoint_pool(self, is_china: bool) -> list[DownloadEndpoint]:
-        """获取端点池。中国用户优先中国镜像，失败时回退国际镜像。"""
+        """Get endpoint pool. Chinese users prioritize China mirrors, falling back to international mirrors on failure."""
         if is_china:
             return self.china_endpoints + self.international_endpoints
         return self.international_endpoints
 
     def _build_download_url(self, endpoint: DownloadEndpoint, beatmapset_id: int, no_video: bool) -> str:
-        """根据端点配置生成下载 URL。"""
+        """Generate download URL based on endpoint configuration."""
         if endpoint.name == "Sayobot":
             video_type = "novideo" if no_video else "full"
             return endpoint.url_template.format(type=video_type, sid=beatmapset_id)
         return endpoint.url_template.format(sid=beatmapset_id)
 
     def get_download_urls(self, beatmapset_id: int, no_video: bool, is_china: bool) -> list[str]:
-        """获取下载 URL 列表（按优先级，健康端点优先）。"""
+        """Get list of download URLs (sorted by priority, healthy endpoints first)."""
         endpoints = self._get_endpoint_pool(is_china)
         if not endpoints:
             return []
@@ -243,14 +243,14 @@ class BeatmapDownloadService:
         return [self._build_download_url(ep, beatmapset_id, no_video) for ep in ordered_endpoints]
 
     def get_download_url(self, beatmapset_id: int, no_video: bool, is_china: bool) -> str:
-        """获取下载URL，带负载均衡和故障转移"""
+        """Get download URL with load balancing and failover."""
         urls = self.get_download_urls(beatmapset_id=beatmapset_id, no_video=no_video, is_china=is_china)
         if not urls:
             raise HTTPException(status_code=503, detail="No download endpoints available")
         return urls[0]
 
     def get_service_status(self) -> dict:
-        """获取服务状态信息"""
+        """Get service status information."""
         status_info = {
             "service_running": self.health_check_running,
             "last_update": datetime.now().isoformat(),
@@ -270,5 +270,5 @@ class BeatmapDownloadService:
         return status_info
 
 
-# 全局服务实例
+# Global service instance
 download_service = BeatmapDownloadService()

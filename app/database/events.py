@@ -31,7 +31,7 @@ class EventType(str, Enum):
     BEATMAPSET_UPLOAD = "beatmapset_upload"
     RANK = "rank"
     RANK_LOST = "rank_lost"
-    # 鉴于本服务器没有 supporter 这一说，这三个字段没有必要
+    # Since this server does not have supporters, these three fields are unnecessary
     # USER_SUPPORT_AGAIN="user_support_again"
     # USER_SUPPORT_FIRST="user_support"
     # USER_SUPPORT_GIFT="user_support_gift"
@@ -58,7 +58,7 @@ class Event(UTCBaseModel, SQLModel, table=True):
             "type": self.type.value,
         }
 
-        # 临时修复：统一成就事件格式 (TODO: 可在数据迁移完成后移除)
+        # Temporary fix: unify achievement event format (TODO: can be removed after data migration)
         if self.type == EventType.ACHIEVEMENT and "achievement" in self.event_payload:
             achievement_data = self.event_payload["achievement"]
             if "achievement_id" in achievement_data and (

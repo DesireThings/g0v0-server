@@ -2,7 +2,7 @@
 """
 download_achievements.py
 
-批量下载 osu! 客户端使用的成就图标（原始图标 + @2x 高清图标）。
+Batch download achievement icons used by the osu! client (standard + @2x high-resolution icons).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def download_achievement_images(achievements_path: Path) -> None:
 
     for resolution in ("", "@2x"):
         for mode in ("osu", "taiko", "fruits", "mania"):
-            # 仅 osu!std 有 9 & 10 星 pass/fc 成就
+            # Only osu!std has 9 & 10 star pass/fc achievements
             limit = 10 if mode == "osu" else 8
             for star_rating in range(1, limit + 1):
                 images.append(f"{mode}-skill-pass-{star_rating}{resolution}.png")

@@ -1,5 +1,5 @@
 """
-邮件验证服务
+Email verification service.
 """
 
 from email.mime.multipart import MIMEMultipart
@@ -13,7 +13,7 @@ from app.log import logger
 
 
 class EmailService:
-    """邮件发送服务"""
+    """Email sending service."""
 
     def __init__(self):
         self.smtp_server = settings.smtp_server
@@ -24,19 +24,19 @@ class EmailService:
         self.from_name = settings.from_name
 
     def generate_verification_code(self) -> str:
-        """生成8位验证码"""
-        # 只使用数字，避免混淆
+        """Generate 8-digit verification code."""
+        # Use only digits to avoid ambiguity
         return "".join(secrets.choice(string.digits) for _ in range(8))
 
     async def send_verification_email(self, email: str, code: str, username: str) -> bool:
-        """发送验证邮件"""
+        """Send verification email."""
         try:
             msg = MIMEMultipart()
             msg["From"] = f"{self.from_name} <{self.from_email}>"
             msg["To"] = email
-            msg["Subject"] = "邮箱验证 - Email Verification"
+            msg["Subject"] = "Email Verification"
 
-            # HTML 邮件内容
+            # HTML email content
             html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -94,42 +94,32 @@ class EmailService:
 <body>
     <div class="container">
         <div class="header">
-            <h1>osu! 邮箱验证</h1>
+            <h1>osu! Email Verification</h1>
             <p>Email Verification</p>
         </div>
 
         <div class="content">
-            <h2>你好 {username}！</h2>
-            <p>感谢你注册我们的 osu! 服务器。为了完成账户验证，请输入以下验证码：</p>
+            <h2>Hello {username}!</h2>
+            <p>Thank you for registering on our osu! server. To complete your account verification, please enter the following verification code:</p>
 
             <div class="code">{code}</div>
 
-            <p>这个验证码将在 <strong>10 分钟后过期</strong>。</p>
+            <p>This verification code will expire in <strong>10 minutes</strong>.</p>
 
             <div class="warning">
-                <strong>注意：</strong>
+                <strong>Important:</strong>
                 <ul>
-                    <li>请不要与任何人分享这个验证码</li>
-                    <li>如果你没有请求此验证码，请忽略这封邮件</li>
-                    <li>验证码只能使用一次</li>
+                    <li>Do not share this verification code with anyone</li>
+                    <li>If you did not request this verification code, please ignore this email</li>
+                    <li>The verification code can only be used once</li>
                 </ul>
             </div>
 
-            <p>如果你有任何问题，请联系我们的支持团队。</p>
-
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-
-            <h3>Hello {username}!</h3>
-            <p>Thank you for registering on our osu! server. To complete your account verification, please enter the following verification code:</p>
-
-            <p>This verification code will expire in <strong>10 minutes</strong>.</p>
-
-            <p><strong>Important:</strong> Do not share this verification code with anyone. If you did not request this code, please ignore this email.</p>
+            <p>If you have any questions, please contact our support team.</p>
         </div>
 
         <div class="footer">
-            <p>© 2025 g0v0! Private Server. 此邮件由系统自动发送，请勿回复。</p>
-            <p>This email was sent automatically, please do not reply.</p>
+            <p>© 2025 g0v0! Private Server. This email was sent automatically, please do not reply.</p>
         </div>
     </div>
 </body>
@@ -153,5 +143,5 @@ class EmailService:
             return False
 
 
-# 全局邮件服务实例
+# Global email service instance
 email_service = EmailService()

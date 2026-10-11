@@ -46,7 +46,7 @@ def snake_to_camel(name: str, use_abbr: bool = True) -> str:
     if not parts:
         return name
 
-    # 常见缩写词列表
+    # Common abbreviations list
     abbreviations = {
         "id",
         "url",
@@ -83,7 +83,7 @@ def snake_to_pascal(name: str, use_abbr: bool = True) -> str:
     if not parts:
         return name
 
-    # 常见缩写词列表
+    # Common abbreviations list
     abbreviations = {
         "id",
         "url",
@@ -112,18 +112,18 @@ def are_adjacent_weeks(dt1: datetime, dt2: datetime) -> bool:
     y1, w1, _ = dt1.isocalendar()
     y2, w2, _ = dt2.isocalendar()
 
-    # 按 (年, 周) 排序，保证 dt1 <= dt2
+    # Sort by (year, week) to ensure dt1 <= dt2
     if (y1, w1) > (y2, w2):
         y1, w1, y2, w2 = y2, w2, y1, w1
 
-    # 同一年，周数相邻
+    # Same year, adjacent weeks
     if y1 == y2 and w2 - w1 == 1:
         return True
 
-    # 跨年，判断 y2 是否是下一年，且 w2 == 1，并且 w1 是 y1 的最后一周
+    # Across years: check if y2 is the next year, w2 == 1, and w1 is the last week of y1
     if y2 == y1 + 1 and w2 == 1:
-        # 判断 y1 的最后一周是多少
-        last_week_y1 = datetime(y1, 12, 28).isocalendar()[1]  # 12-28 保证在最后一周
+        # Determine the last week of y1
+        last_week_y1 = datetime(y1, 12, 28).isocalendar()[1]  # Dec 28 is guaranteed to be in the last week
         if w1 == last_week_y1:
             return True
 
@@ -354,7 +354,7 @@ def _get_type(typ: type, includes: tuple[str, ...]) -> Any:
 def api_doc(desc: str, model: Any, includes: list[str] = [], *, name: str = "APIDict"):
     if includes:
         includes_str = ", ".join(f"`{inc}`" for inc in includes)
-        desc += f"\n\n包含：{includes_str}"
+        desc += f"\n\nIncludes: {includes_str}"
     if isinstance(model, dict):
         fields = {}
         for k, v in model.items():

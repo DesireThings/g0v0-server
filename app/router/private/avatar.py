@@ -127,7 +127,7 @@ async def _clear_avatar(
     await session.commit()
 
 
-@router.post("/avatar/upload", name="上传头像", tags=["用户", "g0v0 API"])
+@router.post("/avatar/upload", name="Upload Avatar", tags=["Users", "g0v0 API"])
 async def upload_avatar(
     session: Database,
     content: Annotated[bytes, File(...)],
@@ -136,22 +136,22 @@ async def upload_avatar(
     cache_service: UserCacheService,
     is_nsfw: Annotated[bool, Form()] = False,
 ):
-    """上传用户头像
+    """Upload user avatar
 
-    接收图片数据，验证图片格式和大小后存储到存储服务，并更新用户的头像 URL
+    Accepts image data, validates format and size, stores it to storage service, and updates the user's avatar URL.
 
-    限制条件:
-    - 支持的图片格式: PNG、JPEG、GIF
-    - 最大文件大小: 5MB
-    - 最大图片尺寸: 256x256 像素
+    Constraints:
+    - Supported formats: PNG, JPEG, GIF
+    - Max file size: 5MB
+    - Max image dimensions: 256x256 pixels
 
-    返回:
-    - 头像 URL 和文件哈希值
+    Returns:
+    - Avatar URL and file hash
     """
     return await _replace_avatar(session, current_user, content, is_nsfw, storage, cache_service)
 
 
-@router.delete("/avatar", name="删除头像", tags=["用户", "g0v0 API"], status_code=204)
+@router.delete("/avatar", name="Delete Avatar", tags=["Users", "g0v0 API"], status_code=204)
 async def delete_avatar(
     session: Database,
     current_user: ClientUser,
@@ -195,7 +195,7 @@ async def _web_target_user(session: Database, user_id: int) -> User:
     return user
 
 
-@router.post("/web/avatar/upload", name="上传头像 (torii-web)", tags=["用户", "g0v0 API"])
+@router.post("/web/avatar/upload", name="Upload Avatar (torii-web)", tags=["Users", "g0v0 API"])
 async def upload_avatar_from_web(
     session: Database,
     storage: StorageService,
@@ -210,7 +210,7 @@ async def upload_avatar_from_web(
     return await _replace_avatar(session, user, content, is_nsfw, storage, cache_service)
 
 
-@router.post("/web/avatar/nsfw", name="标记头像 nsfw (torii-web)", tags=["用户", "g0v0 API"])
+@router.post("/web/avatar/nsfw", name="Mark Avatar NSFW (torii-web)", tags=["Users", "g0v0 API"])
 async def set_avatar_nsfw_from_web(
     session: Database,
     storage: StorageService,
@@ -273,7 +273,7 @@ async def set_avatar_nsfw_from_web(
     return {"is_nsfw": is_nsfw}
 
 
-@router.get("/web/avatar/state", name="estado del avatar (torii-web)", tags=["用户", "g0v0 API"])
+@router.get("/web/avatar/state", name="estado del avatar (torii-web)", tags=["Users", "g0v0 API"])
 async def get_avatar_state_from_web(
     session: Database,
     user_id: int,
@@ -289,7 +289,7 @@ async def get_avatar_state_from_web(
     }
 
 
-@router.delete("/web/avatar", name="删除头像 (torii-web)", tags=["用户", "g0v0 API"], status_code=204)
+@router.delete("/web/avatar", name="Delete Avatar (torii-web)", tags=["Users", "g0v0 API"], status_code=204)
 async def delete_avatar_from_web(
     session: Database,
     storage: StorageService,

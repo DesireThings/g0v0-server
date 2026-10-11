@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/private", dependencies=LIMITERS)
 
-# 导入并包含子路由
+# Import and include sub-routers
 from .audio_proxy import router as audio_proxy_router
 from . import client_version_webhook  # noqa: F401 — registers routes on import
 from .changelog import router as changelog_router

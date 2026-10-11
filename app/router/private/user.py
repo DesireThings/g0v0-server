@@ -59,23 +59,23 @@ def _username_request_to_resp(request: UsernameChangeRequest) -> UsernameChangeR
 
 @router.post(
     "/rename",
-    name="申请修改用户名",
-    tags=["用户", "g0v0 API"],
+    name="Request Username Change",
+    tags=["Users", "g0v0 API"],
     response_model=UsernameChangeRequestResp,
 )
 async def user_rename(
     session: Database,
-    new_name: Annotated[str, Body(..., description="新的用户名")],
+    new_name: Annotated[str, Body(..., description="New username")],
     current_user: ClientUser,
 ):
-    """申请修改用户名
+    """Request Username Change
 
-    不会立即修改用户名，而是创建一个待管理员审核的申请。管理员在网页后台通过或
-    拒绝该申请。
+    Does not immediately change username, but creates a pending request for admin review. Admins can approve or
+    reject the request in the web admin panel.
 
-    错误情况:
-    - 403: 账号被封禁，或新用户名未通过校验
-    - 409: 新用户名已被占用、与当前用户名相同，或已存在待审核的申请
+    Errors:
+    - 403: Account is banned, or new username failed validation
+    - 409: New username already taken, same as current username, or pending request already exists
     """
     if await current_user.is_restricted(session):
         # https://github.com/ppy/osu-web/blob/cae2fdf03cfb8c30c8e332cfb142e03188ceffef/app/Libraries/ChangeUsername.php#L48-L49
@@ -119,8 +119,8 @@ async def user_rename(
 
 @router.get(
     "/username-change-request",
-    name="获取待审核的用户名修改申请",
-    tags=["用户", "g0v0 API"],
+    name="Get Pending Username Change Requests",
+    tags=["Users", "g0v0 API"],
     response_model=UsernameChangeRequestResp | None,
 )
 async def get_my_username_change_request(
@@ -160,7 +160,7 @@ async def get_my_username_change_request(
 @router.post(
     "/username-change-request/acknowledge",
     name="marcar como visto el resultado del cambio de nombre",
-    tags=["用户", "g0v0 API"],
+    tags=["Users", "g0v0 API"],
 )
 async def acknowledge_username_change_request(
     session: Database,
@@ -190,7 +190,7 @@ class UserSelfUpdate(BaseModel):
     # username: str | None = None
 
 
-@router.patch("/me", name="更新个人信息", tags=["用户", "g0v0 API"])
+@router.patch("/me", name="Update Profile", tags=["Users", "g0v0 API"])
 @router.patch("/user/country", include_in_schema=False) # Keep legacy path for now but redirect logic
 async def update_user_profile(
     session: Database,
@@ -236,9 +236,9 @@ async def update_user_profile(
 @router.put(
     "/user/page",
     response_model=UpdateUserpageResponse,
-    name="更新用户页面",
-    description="更新指定用户的个人页面内容（支持BBCode）。匹配官方osu-web API格式。",
-    tags=["用户", "g0v0 API"],
+    name="Update User Page",
+    description="Update profile page content for the specified user (supports BBCode). Matches official osu-web API format.",
+    tags=["Users", "g0v0 API"],
 )
 async def update_userpage(
     request: UpdateUserpageRequest,
@@ -246,15 +246,15 @@ async def update_userpage(
     current_user: ClientUser,
     cache_service: UserCacheService,
 ):
-    """更新用户页面内容"""
+    """Update user page content"""
     if await current_user.is_restricted(session):
         raise HTTPException(403, "Your account is restricted and cannot perform this action.")
 
     try:
-        # 处理BBCode内容
+        # Process BBCode content
         processed_page = bbcode_service.process_userpage_content(request.body)
 
-        # 更新数据库 - 直接更新用户对象
+        # Update database - directly update user object
         current_user.page = Page(html=processed_page["html"], raw=processed_page["raw"])
         session.add(current_user)
         await session.commit()
@@ -262,11 +262,11 @@ async def update_userpage(
 
         await cache_service.invalidate_user_cache(current_user.id)
 
-        # 返回官方格式的响应：只包含html
+        # Return official format response: only contains html
         return UpdateUserpageResponse(html=processed_page["html"])
 
     except UserpageError as e:
-        # 使用官方格式的错误响应：{'error': message}
+        # Use official format error response: {'error': message}
         raise HTTPException(status_code=422, detail={"error": e.message})
     except Exception:
         raise HTTPException(status_code=500, detail={"error": "Failed to update user page"})
@@ -275,19 +275,19 @@ async def update_userpage(
 @router.post(
     "/user/validate-bbcode",
     response_model=ValidateBBCodeResponse,
-    name="验证BBCode",
-    description="验证BBCode语法并返回预览。",
-    tags=["用户", "g0v0 API"],
+    name="Validate BBCode",
+    description="Validate BBCode syntax and return preview.",
+    tags=["Users", "g0v0 API"],
 )
 async def validate_bbcode(
     request: ValidateBBCodeRequest,
 ):
-    """验证BBCode语法"""
+    """Validate BBCode syntax"""
     try:
-        # 验证BBCode语法
+        # Validate BBCode syntax
         errors = bbcode_service.validate_bbcode(request.content)
 
-        # 生成预览（如果没有严重错误）
+        # Generate preview if there are no errors
         if len(errors) == 0:
             preview = bbcode_service.process_userpage_content(request.content)
         else:
@@ -397,9 +397,9 @@ USER_PROFILE_FIELDS_WITH_WEBSITE = USER_PROFILE_FIELDS | {"website"}
 
 @router.get(
     "/user/preferences",
-    name="获取用户偏好设置",
-    description="获取当前登录用户的偏好设置",
-    tags=["用户", "g0v0 API"],
+    name="Get User Preferences",
+    description="Get preferences for current logged-in user",
+    tags=["Users", "g0v0 API"],
     response_model=Preferences,
 )
 async def get_user_preference(
@@ -441,9 +441,9 @@ async def get_user_preference(
 
 @router.patch(
     "/user/preferences",
-    name="修改用户偏好设置",
-    description="修改当前登录用户的偏好设置",
-    tags=["用户", "g0v0 API"],
+    name="Modify User Preferences",
+    description="Modify preferences for current logged-in user",
+    tags=["Users", "g0v0 API"],
     status_code=204,
 )
 async def change_user_preference(
@@ -499,9 +499,9 @@ async def change_user_preference(
 
 @router.put(
     "/user/preferences",
-    name="覆盖用户偏好设置",
-    description="使用提供的数据完整覆盖当前登录用户的偏好设置，未提供的字段将被重置为默认值。",
-    tags=["用户", "g0v0 API"],
+    name="Overwrite User Preferences",
+    description="Completely overwrite preferences for current logged-in user with provided data; omitted fields reset to defaults.",
+    tags=["Users", "g0v0 API"],
     status_code=204,
 )
 async def overwrite_user_preference(
@@ -522,9 +522,9 @@ async def overwrite_user_preference(
 
 @router.delete(
     "/user/preferences",
-    name="删除用户偏好设置",
-    description="删除当前登录用户的偏好设置，恢复为默认值\n\n如果未指定字段，则删除所有可删除的偏好设置",
-    tags=["用户", "g0v0 API"],
+    name="Delete User Preferences",
+    description="Delete preferences for current logged-in user and reset to defaults.\n\nIf no fields specified, deletes all deletable preferences.",
+    tags=["Users", "g0v0 API"],
     status_code=204,
 )
 async def delete_user_preference(

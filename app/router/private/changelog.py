@@ -43,7 +43,7 @@ from app.utils import utcnow
 
 # Use a dedicated APIRouter and let app/router/private/router.py mount it
 # under the /changelog prefix. Same pattern as audio_proxy_router.
-router = APIRouter(tags=["管理", "g0v0 API", "Changelog"])
+router = APIRouter(tags=["Admin", "g0v0 API", "Changelog"])
 
 logger = log("AdminChangelog")
 

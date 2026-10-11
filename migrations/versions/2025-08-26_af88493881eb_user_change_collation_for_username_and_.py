@@ -19,34 +19,34 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # 1. 删除现有索引
+    # 1. Drop existing indexes
     op.drop_index("ix_lazer_users_email", table_name="lazer_users")
     op.drop_index("ix_lazer_users_username", table_name="lazer_users")
 
-    # 2. 修改字段 collation 为 utf8mb4_general_ci
+    # 2. Alter column collation to utf8mb4_general_ci
     op.execute("""
         ALTER TABLE lazer_users
         MODIFY username VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         MODIFY email VARCHAR(254) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL;
     """)
 
-    # 3. 重新创建唯一索引（大小写不敏感）
+    # 3. Recreate unique indexes (case-insensitive)
     op.create_index(op.f("ix_lazer_users_email"), "lazer_users", ["email"], unique=True)
     op.create_index(op.f("ix_lazer_users_username"), "lazer_users", ["username"], unique=True)
 
 
 def downgrade() -> None:
-    # 1. 删除索引
+    # 1. Drop indexes
     op.drop_index("ix_lazer_users_email", table_name="lazer_users")
     op.drop_index("ix_lazer_users_username", table_name="lazer_users")
 
-    # 2. 恢复原 collation（假设原来是 utf8mb4_bin）
+    # 2. Restore original collation (assuming original was utf8mb4_bin)
     op.execute("""
         ALTER TABLE lazer_users
         MODIFY username VARCHAR(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
         MODIFY email VARCHAR(254) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL;
     """)
 
-    # 3. 恢复原索引
+    # 3. Restore original indexes
     op.create_index(op.f("ix_lazer_users_email"), "lazer_users", ["email"], unique=True)
     op.create_index(op.f("ix_lazer_users_username"), "lazer_users", ["username"], unique=True)

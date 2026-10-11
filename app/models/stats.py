@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class OnlineStats(BaseModel):
-    """在线统计信息"""
+    """Online statistics information"""
 
     registered_users: int
     online_users: int
@@ -13,7 +13,7 @@ class OnlineStats(BaseModel):
 
 
 class OnlineHistoryPoint(BaseModel):
-    """在线历史数据点"""
+    """Online history data point"""
 
     timestamp: datetime
     online_count: int
@@ -21,14 +21,14 @@ class OnlineHistoryPoint(BaseModel):
 
 
 class OnlineHistoryStats(BaseModel):
-    """24小时在线历史统计"""
+    """24-hour online history statistics"""
 
     history: list[OnlineHistoryPoint]
     current_stats: OnlineStats
 
 
 class ServerStatistics(BaseModel):
-    """服务器统计信息"""
+    """Server statistics information"""
 
     total_users: int
     online_users: int

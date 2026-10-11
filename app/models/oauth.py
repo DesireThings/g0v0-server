@@ -1,4 +1,4 @@
-# OAuth 相关模型
+# OAuth related models
 from typing import Annotated, Any, cast
 from typing_extensions import Doc
 
@@ -43,13 +43,13 @@ class OAuthErrorResponse(BaseModel):
 
 
 class RegistrationErrorResponse(BaseModel):
-    """注册错误响应模型"""
+    """Registration error response model"""
 
     form_error: dict
 
 
 class UserRegistrationErrors(BaseModel):
-    """用户注册错误模型"""
+    """User registration error model"""
 
     username: list[str] = []
     user_email: list[str] = []
@@ -57,7 +57,7 @@ class UserRegistrationErrors(BaseModel):
 
 
 class RegistrationRequestErrors(BaseModel):
-    """注册请求错误模型"""
+    """Registration request error model"""
 
     message: str | None = None
     redirect: str | None = None

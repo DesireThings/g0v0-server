@@ -455,12 +455,12 @@ CALCULATOR_CONFIG='{}'
     resend_api_key: Annotated[
         str,
         Field(default="", description="Resend API Key (re_...). Free tier: 3K/month, no per-recipient cap."),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     resend_from_email: Annotated[
         str,
         Field(default="", description="Resend sender email (must be on a domain verified in your Resend account)."),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
 
     # ç›‘æŽ§é…ç½®
@@ -526,7 +526,7 @@ CALCULATOR_CONFIG='{}'
                 "apply uniformly across client versions and flags inflated/tampered totals."
             ),
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     matchmaking_current_season: Annotated[
         str,
@@ -537,7 +537,7 @@ CALCULATOR_CONFIG='{}'
                 "(user, ruleset) per this value; bump it to open a new season."
             ),
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     comfort_floor_factor: Annotated[
         float,
@@ -549,7 +549,7 @@ CALCULATOR_CONFIG='{}'
                 "whole range instead of a flat offset that bottoms out for low-SR players)."
             ),
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     comfort_floor_min: Annotated[
         float,
@@ -557,12 +557,12 @@ CALCULATOR_CONFIG='{}'
             default=1.0,
             description="The comfort-pick floor is clamped so it never drops below this star rating.",
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     comfort_pick_max: Annotated[
         float,
         Field(default=7.5, description="Upper bound the comfort star-rating pick is clamped to."),
-        "游戏设置",
+        "Game Settings",
     ]
     comfort_seed_sigma: Annotated[
         float,
@@ -575,7 +575,7 @@ CALCULATOR_CONFIG='{}'
                 "reiniciar). 150 hace que el pick quede mas cerca de lo elegido y estabiliza antes."
             ),
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     matchmaking_placement_plays: Annotated[
         int,
@@ -587,7 +587,7 @@ CALCULATOR_CONFIG='{}'
                 "a fresh star-pick seed does not read as e.g. 'Master' with zero games played."
             ),
         ),
-        "游戏设置",
+        "Game Settings",
     ]
     enable_supporter_for_all_users: Annotated[
         bool,
@@ -908,12 +908,12 @@ CALCULATOR_CONFIG='{}'
     suspicious_alerts_ignored_ips: Annotated[
         str,
         Field(default="", description="Comma-separated CIDR/IP list to suppress suspicious-login alerts (admin VPN exits, home ISP, etc)."),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     suspicious_alerts_ignored_user_ids: Annotated[
         str,
         Field(default="", description="Comma-separated user ids to suppress suspicious-login alerts (admin alt accounts)."),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     # ─── External anti-cheat service (torii-slitwrist) ─────────────────────
     # Detection logic lives in a separate private repo / container; this
@@ -925,7 +925,7 @@ CALCULATOR_CONFIG='{}'
             default="",
             description="Base URL of the private anti-cheat detection service (e.g. http://torii-slitwrist:8082). Empty = feature disabled.",
         ),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     anticheat_token: Annotated[
         str,
@@ -933,7 +933,7 @@ CALCULATOR_CONFIG='{}'
             default="",
             description="Shared secret sent as X-AC-Token on every anti-cheat call. Match the value the service is configured to accept.",
         ),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     anticheat_timeout_sec: Annotated[
         float,
@@ -941,7 +941,7 @@ CALCULATOR_CONFIG='{}'
             default=8.0,
             description="Read timeout for the anti-cheat call. Fire-and-forget; a hung service must NOT block score submission.",
         ),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     anticheat_include_replay: Annotated[
         bool,
@@ -949,7 +949,7 @@ CALCULATOR_CONFIG='{}'
             default=True,
             description="Whether to forward the binary replay (base64-encoded) when available. Disable to reduce bandwidth if the service only does behavioural / score-shape checks.",
         ),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     anticheat_critical_creates_alert: Annotated[
         bool,
@@ -957,7 +957,7 @@ CALCULATOR_CONFIG='{}'
             default=True,
             description="When the anti-cheat verdict is 'critical' or 'suspicious', create a SuspiciousAlert row so the existing mod-alert dispatch pipeline picks it up. The score is NEVER auto-rejected regardless of verdict.",
         ),
-        "验证服务设置",
+        "Verification Service Settings",
     ]
     banned_name: Annotated[
         list[str],
@@ -1012,7 +1012,7 @@ CALCULATOR_CONFIG='{}'
                 "'TORII_VERSION_WEBHOOK_SECRET'. Leave empty to disable the endpoint."
             ),
         ),
-        "反作弊设置",
+        "Anti-Cheat Settings",
     ]
 
     # ── Donations ────────────────────────────────────────────────────────────

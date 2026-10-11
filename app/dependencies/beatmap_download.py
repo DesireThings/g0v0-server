@@ -6,7 +6,7 @@ from fastapi import Depends
 
 
 def get_beatmap_download_service():
-    """获取谱面下载服务实例"""
+    """Get beatmap download service instance"""
     return download_service
 
 

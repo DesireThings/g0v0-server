@@ -39,10 +39,10 @@ async def _ensure_room_chat_channel(
     host_user_id: int,
 ) -> ChatChannel:
     """
-    为房间创建/确保存在对应的聊天频道，channel_id 与 room.channel_id 保持一致，
-    名称使用 mp_{room.id}（可按需调整）。
+    Create/ensure a chat channel exists for room, channel_id matches room.channel_id,
+    named mp_{room.id} (customizable as needed).
     """
-    # 1) 按 channel_id 查是否已存在
+    # 1) Check if channel already exists by channel_id
     try:
         # Use db.execute instead of db.exec for better async compatibility
         result = await db.exec(select(ChatChannel).where(ChatChannel.channel_id == room.channel_id))
@@ -268,7 +268,7 @@ async def _create_room(db: Database, room_data: dict[str, Any]) -> tuple[Room, i
 
     match_type_enum, queue_mode_enum = _parse_room_enums(match_type, queue_mode)
 
-    # 创建房间
+    # Create room
     room = Room(
         name=room_name,
         category=RoomCategory.REALTIME,
@@ -387,8 +387,8 @@ async def _verify_room_password(db: Database, room_id: int, provided_password: s
 
 
 async def _add_or_update_participant(db: Database, room_id: int, user_id: int) -> None:
-    """添加用户为参与者或更新现有参与记录。"""
-    # 检查用户是否已有活跃的参与记录
+    """Add user as participant or update existing participation record."""
+    # Check if user already has active participation record
     existing_result = await db.execute(
         select(RoomParticipatedUser.id).where(
             RoomParticipatedUser.room_id == room_id,
@@ -396,14 +396,14 @@ async def _add_or_update_participant(db: Database, room_id: int, user_id: int) -
             col(RoomParticipatedUser.left_at).is_(None),
         )
     )
-    existing_ids = existing_result.scalars().all()  # 获取所有匹配的ID
+    existing_ids = existing_result.scalars().all()  # Get all matching IDs
 
     if existing_ids:
-        # 如果存在多条记录，清理重复项，只保留最新的一条
+        # If multiple records exist, clean up duplicates and keep only the latest
         if len(existing_ids) > 1:
-            logger.debug(f"警告：用户 {user_id} 在房间 {room_id} 中发现 {len(existing_ids)} 条活跃参与记录")
+            logger.debug(f"Warning: user {user_id} has {len(existing_ids)} active participation records in room {room_id}")
 
-            # 将除第一条外的所有记录标记为已离开（清理重复记录）
+            # Mark all records except the first as left (clean up duplicate records)
             for extra_id in existing_ids[1:]:
                 await db.execute(
                     update(RoomParticipatedUser)
@@ -411,14 +411,14 @@ async def _add_or_update_participant(db: Database, room_id: int, user_id: int) -
                     .values(left_at=utcnow())
                 )
 
-        # 更新剩余的活跃参与记录（刷新加入时间）
+        # Update remaining active participation record (refresh joined time)
         await db.execute(
             update(RoomParticipatedUser)
             .where(col(RoomParticipatedUser.id) == existing_ids[0])
             .values(joined_at=utcnow())
         )
     else:
-        # 创建新的参与记录
+        # Create new participation record
         participant = RoomParticipatedUser(room_id=room_id, user_id=user_id)
         db.add(participant)
 
@@ -431,16 +431,16 @@ class BeatmapEnsureRequest(BaseModel):
 
 async def _ensure_beatmap_exists(db: Database, fetcher, redis, beatmap_id: int) -> dict[str, Any]:
     """
-    确保谱面存在（包括元数据和原始文件缓存）。
+    Ensure beatmap exists (including metadata and raw file cache).
 
     Args:
-        db: 数据库会话
-        fetcher: API获取器
-        redis: Redis连接
-        beatmap_id: 谱面ID
+        db: Database session
+        fetcher: API fetcher
+        redis: Redis connection
+        beatmap_id: Beatmap ID
 
     Returns:
-        Dict: 包含状态信息的响应
+        Dict: Response containing status information
     """
     # Torii: el spectator manda beatmap_id=-1 cuando el cliente esta jugando un
     # mapa sin id online (una dificultad local, una copia hecha en el editor, o
@@ -451,7 +451,7 @@ async def _ensure_beatmap_exists(db: Database, fetcher, redis, beatmap_id: int) 
         return {"success": False, "error": "beatmap has no online id", "beatmap_id": beatmap_id}
 
     try:
-        # 1. 确保谱面元数据存在于数据库中
+        # 1. Ensure beatmap metadata exists in database
         from app.database.beatmap import Beatmap
 
         beatmap = await Beatmap.get_or_fetch(db, fetcher, bid=beatmap_id)
@@ -459,18 +459,18 @@ async def _ensure_beatmap_exists(db: Database, fetcher, redis, beatmap_id: int) 
         if not beatmap:
             return {"success": False, "error": f"Beatmap {beatmap_id} not found", "beatmap_id": beatmap_id}
 
-        # 2. 预缓存谱面原始文件
+        # 2. Pre-cache raw beatmap file
         cache_key = f"beatmap:{beatmap_id}:raw"
         cached = await redis.exists(cache_key)
 
         if not cached:
-            # 异步预加载原始文件到缓存
+            # Asynchronously preload raw file into cache
             try:
                 await fetcher.get_or_fetch_beatmap_raw(redis, beatmap_id)
                 logger.debug(f"Successfully cached raw beatmap file for {beatmap_id}")
             except Exception as e:
                 logger.debug(f"Warning: Failed to cache raw beatmap {beatmap_id}: {e}")
-                # 即使原始文件缓存失败，也认为确保操作成功（因为元数据已存在）
+                # Even if raw file cache fails, consider ensure operation successful (since metadata exists)
 
         return {
             "success": True,
@@ -486,8 +486,8 @@ async def _ensure_beatmap_exists(db: Database, fetcher, redis, beatmap_id: int) 
 
 
 async def _update_room_participant_count(db: Database, room_id: int) -> int:
-    """更新房间参与者数量并返回当前数量。"""
-    # 统计活跃参与者
+    """Update room participant count and return current count."""
+    # Count active participants
     active_participants_result = await db.execute(
         select(RoomParticipatedUser.user_id).where(
             RoomParticipatedUser.room_id == room_id, col(RoomParticipatedUser.left_at).is_(None)
@@ -496,26 +496,26 @@ async def _update_room_participant_count(db: Database, room_id: int) -> int:
     active_participants = active_participants_result.all()
     count = len(active_participants)
 
-    # 更新房间参与者数量
+    # Update room participant count
     await db.execute(update(Room).where(col(Room.id) == room_id).values(participant_count=count))
 
     return count
 
 
 async def _end_room_if_empty(db: Database, room_id: int) -> bool:
-    """如果房间为空，则标记房间结束。返回是否结束了房间。"""
-    # 检查房间是否还有活跃参与者
+    """If room is empty, mark room as ended. Returns whether room was ended."""
+    # Check if room still has active participants
     participant_count = await _update_room_participant_count(db, room_id)
 
     if participant_count == 0:
-        # 房间为空，标记结束
+        # Room is empty, mark as ended
         now = utcnow()
         await db.execute(
             update(Room)
             .where(col(Room.id) == room_id)
             .values(
                 ends_at=now,
-                status=RoomStatus.IDLE,  # 或者使用 RoomStatus.ENDED 如果有这个状态
+                status=RoomStatus.IDLE,  # Or use RoomStatus.ENDED if available
                 participant_count=0,
             )
         )
@@ -526,8 +526,8 @@ async def _end_room_if_empty(db: Database, room_id: int) -> bool:
 
 
 async def _transfer_ownership_or_end_room(db: Database, room_id: int, leaving_user_id: int) -> bool:
-    """处理房主离开的逻辑：转让房主权限或结束房间。返回是否结束了房间。"""
-    # 查找其他活跃参与者来转让房主权限
+    """Handle host leaving logic: transfer host permissions or end room. Returns whether room was ended."""
+    # Find other active participants to transfer host permissions
     remaining_result = await db.execute(
         select(RoomParticipatedUser.user_id)
         .where(
@@ -535,18 +535,18 @@ async def _transfer_ownership_or_end_room(db: Database, room_id: int, leaving_us
             col(RoomParticipatedUser.user_id) != leaving_user_id,
             col(RoomParticipatedUser.left_at).is_(None),
         )
-        .order_by(col(RoomParticipatedUser.joined_at))  # 按加入时间排序
+        .order_by(col(RoomParticipatedUser.joined_at))  # Sort by join time
     )
     remaining_participants = remaining_result.all()
 
     if remaining_participants:
-        # 将房主权限转让给最早加入的用户
-        new_owner_id = remaining_participants[0][0]  # 获取 user_id
+        # Transfer host permissions to earliest joined user
+        new_owner_id = remaining_participants[0][0]  # Get user_id
         await db.execute(update(Room).where(col(Room.id) == room_id).values(host_id=new_owner_id))
         logger.debug(f"Room {room_id} ownership transferred from {leaving_user_id} to {new_owner_id}")
-        return False  # 房间继续存在
+        return False  # Room continues to exist
     else:
-        # 没有其他参与者，结束房间
+        # No other participants, end room
         return await _end_room_if_empty(db, room_id)
 
 
@@ -574,7 +574,7 @@ async def create_multiplayer_room(
         try:
             channel = await _ensure_room_chat_channel(db, room, host_user_id)
 
-            # 让房主加入频道
+            # Add host to channel
             host_user = await db.get(User, host_user_id)
             if host_user:
                 await server.batch_join_channel([host_user], channel)
@@ -632,7 +632,7 @@ async def remove_user_from_room(
     try:
         now = utcnow()
 
-        # 检查房间是否存在
+        # Check if room exists
         room_result = await db.execute(select(Room).where(col(Room.id) == room_id))
         room = room_result.scalar_one_or_none()
 
@@ -643,12 +643,12 @@ async def remove_user_from_room(
         ends_at = room.ends_at
         channel_id = room.channel_id
 
-        # 如果房间已经结束，直接返回
+        # If room has already ended, return directly
         if ends_at is not None:
             logger.debug(f"Room {room_id} is already ended")
             return {"success": True, "room_ended": True}
 
-        # 检查用户是否在房间中
+        # Check if user is in room
         participant_result = await db.execute(
             select(RoomParticipatedUser.id).where(
                 col(RoomParticipatedUser.room_id) == room_id,
@@ -659,7 +659,7 @@ async def remove_user_from_room(
         participant_query = participant_result.first()
 
         if not participant_query:
-            # 用户不在房间中，检查房间是否需要结束（幂等操作）
+            # User not in room, check if room needs to end (idempotent operation)
             room_ended = await _end_room_if_empty(db, room_id)
             await db.commit()
 
@@ -673,7 +673,7 @@ async def remove_user_from_room(
 
             return {"success": True, "room_ended": room_ended}
 
-        # 标记用户离开房间
+        # Mark user as left room
         await db.execute(
             update(RoomParticipatedUser)
             .where(
@@ -686,18 +686,18 @@ async def remove_user_from_room(
 
         room_ended = False
 
-        # 检查是否是房主离开
+        # Check if host left
         if user_id == room_owner_id:
             logger.debug(f"Host {user_id} is leaving room {room_id}")
             room_ended = await _transfer_ownership_or_end_room(db, room_id, user_id)
         else:
-            # 不是房主离开，只需检查房间是否为空
+            # Not host leaving, only check if room is empty
             room_ended = await _end_room_if_empty(db, room_id)
 
         await db.commit()
         logger.debug(f"Successfully removed user {user_id} from room {room_id}, room_ended: {room_ended}")
 
-        # ===== 新增：提交后，把用户从聊天频道移除；若房间已结束，清理内存频道 =====
+        # After commit: remove user from chat channel; clean up in-memory channel if ended
         try:
             if channel_id:
                 await server.leave_room_channel(int(channel_id), int(user_id))
@@ -739,7 +739,7 @@ async def add_user_to_room(
             logger.debug("Failed to parse user_data from request body")
             user_data = None
 
-    # 检查房间是否已结束
+    # Check if room has ended
     room_result = await db.exec(select(Room.ends_at, Room.channel_id, Room.host_id).where(col(Room.id) == room_id))
     room_row = room_result.first()
     if not room_row:
@@ -760,13 +760,13 @@ async def add_user_to_room(
     # Update participant count
     await _update_room_participant_count(db, room_id)
 
-    # 先提交 DB 状态，确保参与关系已生效
+    # First commit DB state to ensure participation relationship is persisted
     await db.commit()
     logger.debug(f"Successfully added user {user_id} to room {room_id}")
 
-    # ===== 新增：确保有聊天频道并把用户加入 =====
+    # Ensure chat channel exists and add user to it
     try:
-        # 若房间还没分配/创建频道，补建并同步回写
+        # If room does not have channel allocated/created, create and synchronize
         if not channel_id:
             room = await db.get(Room, room_id)
             if room is None:
@@ -776,13 +776,13 @@ async def add_user_to_room(
             channel_id = room.channel_id
 
         if channel_id:
-            # 加入聊天频道 → 内存注册 + 给在线客户端发 chat.channel.join
+            # Join chat channel -> in-memory registration + send chat.channel.join to online clients
             await server.join_room_channel(int(channel_id), int(user_id))
         else:
-            # 理论上不会发生；留日志以便排查
+            # In theory this should not happen; log for diagnosis
             logger.debug(f"[warn] Room {room_id} has no channel_id after ensure.")
     except Exception as e:
-        # 不影响加入房间主流程，仅记录
+        # Does not affect main room join flow, log only
         logger.debug(f"[warn] failed to join user {user_id} to channel of room {room_id}: {e}")
 
     return {"success": True}
@@ -796,19 +796,19 @@ async def ensure_beatmap_present(
     fetcher: Fetcher,
 ) -> dict[str, Any]:
     """
-    确保谱面在服务器中存在（包括元数据和原始文件缓存）。
+    Ensure beatmap exists on server (including metadata and raw file cache).
 
-    这个接口用于 osu-server-spectator 确保谱面文件在服务器端可用，
-    避免在需要时才获取导致的延迟。
+    Used by osu-server-spectator to ensure beatmap files are available on server side,
+    avoiding latency from on-demand fetching.
     """
     try:
         beatmap_id = beatmap_data.beatmap_id
         logger.debug(f"Ensuring beatmap {beatmap_id} is present")
 
-        # 确保谱面存在
+        # Ensure beatmap exists
         result = await _ensure_beatmap_exists(db, fetcher, redis, beatmap_id)
 
-        # 提交数据库更改
+        # Commit database changes
         await db.commit()
 
         logger.debug(f"Ensure beatmap {beatmap_id} result: {result}")

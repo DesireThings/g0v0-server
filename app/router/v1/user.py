@@ -40,7 +40,7 @@ class V1User(AllStrModel):
 
     @classmethod
     def _get_cache_key(cls, user_id: int, ruleset: GameMode | None = None) -> str:
-        """生成 V1 用户缓存键"""
+        """Generate V1 user cache key"""
         if ruleset:
             return f"v1_user:{user_id}:ruleset:{ruleset}"
         return f"v1_user:{user_id}"
@@ -88,27 +88,27 @@ class V1User(AllStrModel):
 @router.get(
     "/get_user",
     response_model=list[V1User],
-    name="获取用户信息",
-    description="获取指定用户的信息。",
+    name="Get User Info",
+    description="Get information for the specified user.",
 )
 async def get_user(
     session: Database,
     background_tasks: BackgroundTasks,
-    user: Annotated[str, Query(..., alias="u", description="用户")],
+    user: Annotated[str, Query(..., alias="u", description="User")],
     ruleset_id: Annotated[int | None, Query(alias="m", description="Ruleset ID", ge=0)] = None,
-    type: Annotated[Literal["string", "id"] | None, Query(description="用户类型：string 用户名称 / id 用户 ID")] = None,
-    event_days: Annotated[int, Query(ge=1, le=31, description="从现在起所有事件的最大天数")] = 1,
+    type: Annotated[Literal["string", "id"] | None, Query(description="User lookup type: 'string' for username / 'id' for user ID")] = None,
+    event_days: Annotated[int, Query(ge=1, le=31, description="Max number of days between now and events")] = 1,
 ):
     redis = get_redis()
     cache_service = get_user_cache_service(redis)
 
-    # 确定查询方式和用户ID
+    # Determine query type and user ID
     is_id_query = type == "id" or user.isdigit()
 
-    # 解析 ruleset
+    # Parse ruleset
     ruleset = GameMode.from_int_extra(ruleset_id) if ruleset_id else None
 
-    # 如果是 ID 查询，先尝试从缓存获取
+    # If ID query, try getting from cache first
     cached_v1_user = None
     user_id_for_cache = None
 
@@ -119,9 +119,9 @@ async def get_user(
             if cached_v1_user:
                 return [V1User(**cached_v1_user)]
         except (ValueError, TypeError):
-            pass  # 不是有效的用户ID，继续数据库查询
+            pass  # Not a valid user ID, continue with database query
 
-    # 从数据库查询用户
+    # Query user from database
     db_user = (
         await session.exec(
             select(User).where(
@@ -135,10 +135,10 @@ async def get_user(
         return []
 
     try:
-        # 生成用户数据
+        # Generate user data
         v1_user = await V1User.from_db(db_user, ruleset)
 
-        # 异步缓存结果（如果有用户ID）
+        # Asynchronously cache result (if user ID exists)
         if db_user.id is not None:
             user_data = v1_user.model_dump()
             background_tasks.add_task(cache_service.cache_v1_user, user_data, db_user.id, ruleset)
@@ -152,13 +152,13 @@ async def get_user(
         raise HTTPException(500, "Internal server error")
 
 
-# 以下为 get_player_info 接口相关的实现函数
+# Helper functions for get_player_info endpoint
 
 
 async def _get_pp_history_for_mode(session: Database, user_id: int, mode: GameMode, days: int = 30) -> list[float]:
-    """获取指定模式的 PP 历史数据"""
+    """Get PP history data for the specified mode"""
     try:
-        # 获取最近 30 天的排名历史（由于没有 PP 历史，我们使用当前的 PP 填充）
+        # Get ranking history for the last 30 days (fill with current PP since PP history is unavailable)
         stats = (
             await session.exec(
                 select(UserStatistics).where(
@@ -170,7 +170,7 @@ async def _get_pp_history_for_mode(session: Database, user_id: int, mode: GameMo
         ).first()
 
         current_pp = stats.pp if stats else 0.0
-        # 创建 30 天的 PP 历史（使用当前 PP 值填充）
+        # Create 30 days PP history (filled with current PP value)
         return [current_pp] * days
     except Exception as e:
         logger.error(f"Error getting PP history for user {user_id}, mode {mode}: {e}")

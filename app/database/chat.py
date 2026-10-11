@@ -294,7 +294,7 @@ class ChatChannel(ChatChannelModel, table=True):
     @classmethod
     async def get(cls, channel: str | int, session: AsyncSession) -> "ChatChannel | None":
         if isinstance(channel, int) or channel.isdigit():
-            # 使用查询而不是 get() 来确保对象完全加载
+            # Use query instead of get() to ensure the object is fully loaded
             result = await session.exec(select(ChatChannel).where(ChatChannel.channel_id == int(channel)))
             channel_ = result.first()
             if channel_ is not None:

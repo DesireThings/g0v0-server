@@ -129,7 +129,7 @@ class ScoreDict(TypedDict):
     user: NotRequired[UserDict]
     weight: NotRequired[float | None]
 
-    # ScoreResp 字段
+    # ScoreResp fields
     legacy_total_score: NotRequired[int]
 
 
@@ -156,7 +156,7 @@ class ScoreModel(AsyncAttrs, DatabaseModel[ScoreDict]):
 
     DEFAULT_SCORE_INCLUDES: ClassVar[list[str]] = ["user", "user.country", "user.cover", "user.team", *COSMETIC_USER_INCLUDES]
 
-    # 基本字段
+    # Basic fields
     beatmap_id: int = Field(index=True, foreign_key="beatmaps.id")
     id: int = Field(default=None, sa_column=Column(BigInteger, autoincrement=True, primary_key=True))
     rank: Rank
@@ -470,17 +470,17 @@ class ScoreModel(AsyncAttrs, DatabaseModel[ScoreDict]):
     @field_validator("maximum_statistics", mode="before")
     @classmethod
     def validate_maximum_statistics(cls, v):
-        """处理 maximum_statistics 字段中的字符串键，转换为 HitResult 枚举"""
+        """Handle string keys in maximum_statistics field and convert them to HitResult enum"""
         if isinstance(v, dict):
             converted = {}
             for key, value in v.items():
                 if isinstance(key, str):
                     try:
-                        # 尝试将字符串转换为 HitResult 枚举
+                        # Try to convert string to HitResult enum
                         enum_key = HitResult(key)
                         converted[enum_key] = value
                     except ValueError:
-                        # 如果转换失败，跳过这个键值对
+                        # If conversion fails, skip this key-value pair
                         continue
                 else:
                     converted[key] = value
@@ -489,22 +489,22 @@ class ScoreModel(AsyncAttrs, DatabaseModel[ScoreDict]):
 
     @field_serializer("maximum_statistics", when_used="json")
     def serialize_maximum_statistics(self, v):
-        """序列化 maximum_statistics 字段，确保枚举值正确转换为字符串"""
+        """Serialize maximum_statistics field, ensuring enum values are correctly converted to strings"""
         if isinstance(v, dict):
             serialized = {}
             for key, value in v.items():
                 if hasattr(key, "value"):
-                    # 如果是枚举，使用其值
+                    # If it is an enum, use its value
                     serialized[key.value] = value
                 else:
-                    # 否则直接使用键
+                    # Otherwise use key directly
                     serialized[str(key)] = value
             return serialized
         return v
 
     @field_serializer("rank", when_used="json")
     def serialize_rank(self, v):
-        """序列化等级，确保枚举值正确转换为字符串"""
+        """Serialize grade, ensuring enum value is correctly converted to string"""
         if hasattr(v, "value"):
             return v.value
         return str(v)
@@ -546,18 +546,18 @@ class Score(ScoreModel, table=True):
     @field_validator("gamemode", mode="before")
     @classmethod
     def validate_gamemode(cls, v):
-        """将字符串转换为 GameMode 枚举"""
+        """Convert string to GameMode enum"""
         if isinstance(v, str):
             try:
                 return GameMode(v)
             except ValueError:
-                # 如果转换失败，返回默认值
+                # If conversion fails, return default value
                 return GameMode.OSU
         return v
 
     @field_serializer("gamemode", when_used="json")
     def serialize_gamemode(self, v):
-        """序列化游戏模式，确保枚举值正确转换为字符串"""
+        """Serialize game mode, ensuring enum value is correctly converted to string"""
         if hasattr(v, "value"):
             return v.value
         return str(v)
@@ -1813,8 +1813,8 @@ async def _process_statistics(
         statistics.level_current = calculate_score_to_level(statistics.total_score)
         statistics.maximum_combo = max(statistics.maximum_combo, score.max_combo)
     if score.passed and has_leaderboard:
-        # 情况1: 没有最佳分数记录，直接添加
-        # 情况2: 有最佳分数记录但没有该mod组合的记录，添加新记录
+        # Case 1: No best score record exists, add directly
+        # Case 2: Best score record exists but no record for this mod combination, add new record
         if previous_score_best is None or previous_score_best_mod is None:
             session.add(
                 TotalScoreBestScore(
@@ -1834,7 +1834,7 @@ async def _process_statistics(
                 mods=mod_for_save,
             )
 
-        # 情况3: 有最佳分数记录和该mod组合的记录，且是同一个记录，更新得分更高的情况
+        # Case 3: Both best score and mod combination records exist, and they are the same record; update if score is higher
         elif previous_score_best.score_id == previous_score_best_mod.score_id and difference > 0:
             previous_score_best.total_score = score.total_score
             previous_score_best.rank = score.rank
@@ -1846,11 +1846,11 @@ async def _process_statistics(
                 total=score.total_score,
             )
 
-        # 情况4: 有最佳分数记录和该mod组合的记录，但不是同一个记录
+        # Case 4: Both best score and mod combination records exist, but are different records
         elif previous_score_best.score_id != previous_score_best_mod.score_id:
-            # 更新全局最佳记录（如果新分数更高）
+            # Update global best record (if new score is higher)
             if difference > 0:
-                # 下方的 if 一定会触发。将高分设置为此分数，删除自己防止重复的 score_id
+                # The if below will definitely trigger. Set high score to this score, delete self to prevent duplicate score_id
                 logger.info(
                     "Replacing global best score for user {user_id} | old_score_id={old_score_id}",
                     user_id=user.id,
@@ -1858,7 +1858,7 @@ async def _process_statistics(
                 )
                 await session.delete(previous_score_best)
 
-            # 更新mod特定最佳记录（如果新分数更高）
+            # Update mod-specific best record (if new score is higher)
             mod_diff = score.total_score - previous_score_best_mod.total_score
             if mod_diff > 0:
                 previous_score_best_mod.total_score = score.total_score

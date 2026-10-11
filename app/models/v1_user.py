@@ -1,16 +1,16 @@
-"""V1 API 用户相关模型"""
+"""V1 API user related models"""
 
 from pydantic import BaseModel, Field
 
 
 class PlayerStatsHistory(BaseModel):
-    """玩家 PP 历史数据"""
+    """Player PP history data"""
 
     pp: list[float] = Field(default_factory=list)
 
 
 class PlayerModeStats(BaseModel):
-    """单个模式的玩家统计数据"""
+    """Player statistics data for a single mode"""
 
     id: int
     mode: int
@@ -36,13 +36,13 @@ class PlayerModeStats(BaseModel):
 
 
 class PlayerStatsResponse(BaseModel):
-    """玩家统计信息响应 - 包含所有模式"""
+    """Player statistics response - contains all modes"""
 
     stats: dict[str, PlayerModeStats] = Field(default_factory=dict)
 
 
 class PlayerEventItem(BaseModel):
-    """玩家事件项目"""
+    """Player event item"""
 
     userId: int  # noqa: N815
     name: str
@@ -59,13 +59,13 @@ class PlayerEventItem(BaseModel):
 
 
 class PlayerEventsResponse(BaseModel):
-    """玩家事件响应"""
+    """Player events response"""
 
     events: list[PlayerEventItem] = Field(default_factory=list)
 
 
 class PlayerInfo(BaseModel):
-    """玩家基本信息"""
+    """Player basic information"""
 
     id: int
     name: str
@@ -97,13 +97,13 @@ class PlayerInfo(BaseModel):
 
 
 class PlayerInfoResponse(BaseModel):
-    """玩家信息响应"""
+    """Player information response"""
 
     info: PlayerInfo
 
 
 class PlayerAllResponse(BaseModel):
-    """玩家完整信息响应 - 包含所有数据"""
+    """Player full information response - contains all data"""
 
     info: PlayerInfo
     stats: dict[str, PlayerModeStats] = Field(default_factory=dict)
@@ -111,21 +111,21 @@ class PlayerAllResponse(BaseModel):
 
 
 class GetPlayerInfoResponse(BaseModel):
-    """get_player_info 接口响应"""
+    """get_player_info endpoint response"""
 
     status: str = "success"
     player: PlayerStatsResponse | PlayerEventsResponse | PlayerInfoResponse | PlayerAllResponse
 
 
 class PlayerCountData(BaseModel):
-    """玩家数量数据"""
+    """Player count data"""
 
     online: int
     total: int
 
 
 class GetPlayerCountResponse(BaseModel):
-    """get_player_count 接口响应"""
+    """get_player_count endpoint response"""
 
     status: str = "success"
     counts: PlayerCountData

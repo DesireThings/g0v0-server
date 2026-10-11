@@ -1,4 +1,4 @@
-"""资源代理辅助方法与路由装饰器。"""
+"""Asset proxy helper methods and route decorators."""
 
 from collections.abc import Awaitable, Callable
 from functools import wraps
@@ -66,7 +66,7 @@ def _replace_asset_urls_in_data(data: Any) -> Any:
 
 
 async def replace_asset_urls(data: Any) -> Any:
-    """替换数据中的 osu! 资源 URL。"""
+    """Replace osu! asset URLs in data."""
 
     if not settings.enable_asset_proxy:
         return data
@@ -86,7 +86,7 @@ async def replace_asset_urls(data: Any) -> Any:
 
 
 def asset_proxy_response(func: Handler) -> Handler:
-    """装饰器：在返回响应前替换资源 URL。"""
+    """Decorator: Replace asset URLs before returning response."""
 
     @wraps(func)
     async def wrapper(*args, **kwargs):

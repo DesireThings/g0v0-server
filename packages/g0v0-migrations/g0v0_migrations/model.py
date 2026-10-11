@@ -15,28 +15,28 @@ class G0v0ServerDatabaseConfig(BaseSettings):
 
     mysql_host: Annotated[
         str,
-        Field(default="localhost", description="MySQL 服务器地址"),
-        "数据库设置",
+        Field(default="localhost", description="MySQL server address"),
+        "Database Settings",
     ]
     mysql_port: Annotated[
         int,
-        Field(default=3306, description="MySQL 服务器端口"),
-        "数据库设置",
+        Field(default=3306, description="MySQL server port"),
+        "Database Settings",
     ]
     mysql_database: Annotated[
         str,
-        Field(default="osu_api", description="MySQL 数据库名称"),
-        "数据库设置",
+        Field(default="osu_api", description="MySQL database name"),
+        "Database Settings",
     ]
     mysql_user: Annotated[
         str,
-        Field(default="osu_api", description="MySQL 用户名"),
-        "数据库设置",
+        Field(default="osu_api", description="MySQL username"),
+        "Database Settings",
     ]
     mysql_password: Annotated[
         str,
-        Field(default="password", description="MySQL 密码"),
-        "数据库设置",
+        Field(default="password", description="MySQL password"),
+        "Database Settings",
     ]
 
     @property

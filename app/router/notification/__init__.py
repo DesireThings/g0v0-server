@@ -30,14 +30,14 @@ class NotificationResp(BaseModel):
 
 @router.get(
     "/notifications",
-    tags=["通知", "聊天"],
-    name="获取通知",
-    description="获取当前用户未读通知。根据 ID 排序。同时返回通知服务器入口。",
+    tags=["Notifications", "Chat"],
+    name="Get Notifications",
+    description="Get unread notifications for the current user, ordered by ID. Also returns the notification server endpoint.",
     response_model=NotificationResp,
 )
 async def get_notifications(
     session: Database,
-    max_id: int | None = Query(None, description="获取 ID 小于此值的通知"),
+    max_id: int | None = Query(None, description="Get notifications with ID less than this value"),
     current_user: User = Security(get_client_user),
 ):
     if settings.server_url is not None:
@@ -129,9 +129,9 @@ async def _get_notifications(
 
 @router.post(
     "/notifications/mark-read",
-    tags=["通知", "聊天"],
-    name="标记通知为已读",
-    description="标记当前用户的通知为已读。",
+    tags=["Notifications", "Chat"],
+    name="Mark Notifications as Read",
+    description="Mark current user notifications as read.",
     status_code=204,
 )
 async def mark_notifications_as_read(

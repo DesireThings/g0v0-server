@@ -10,15 +10,15 @@ from httpx import AsyncClient, HTTPStatusError, TimeoutException
 
 
 class TokenAuthError(Exception):
-    """Token 授权失败异常"""
+    """Token authorization failure exception."""
 
     pass
 
 
 class PassiveRateLimiter:
     """
-    被动速率限制器
-    当收到 429 响应时，读取 Retry-After 头并暂停所有请求
+    Passive rate limiter.
+    When receiving a 429 response, reads the Retry-After header and pauses all requests.
     """
 
     def __init__(self):
@@ -43,27 +43,27 @@ class PassiveRateLimiter:
 
     async def handle_rate_limit(self, retry_after: str | int | None) -> None:
         """
-        处理 429 响应，设置限流时间
+        Handle 429 response and set rate limit wait time.
 
         Args:
-            retry_after: Retry-After 头的值，可以是秒数或 HTTP 日期
+            retry_after: Value of the Retry-After header, either seconds or an HTTP date string.
         """
         async with self._lock:
             if retry_after is None:
-                # 如果没有 Retry-After 头，默认等待 60 秒
+                # If there is no Retry-After header, default to waiting 60 seconds
                 wait_seconds = 60
             elif isinstance(retry_after, int):
                 wait_seconds = retry_after
             elif retry_after.isdigit():
                 wait_seconds = int(retry_after)
             else:
-                # 尝试解析 HTTP 日期格式
+                # Try to parse HTTP date format
                 try:
                     retry_time = datetime.strptime(retry_after, "%a, %d %b %Y %H:%M:%S %Z")
                     #wait_seconds = max(0, (retry_time - datetime.utcnow()).total_seconds())
                     wait_seconds = max(0, (retry_time - utcnow()).total_seconds())
                 except ValueError:
-                    # 解析失败，默认等待 60 秒
+                    # Parsing failed, default to waiting 60 seconds
                     wait_seconds = 60
 
             self._retry_after_time = time.time() + wait_seconds
@@ -74,7 +74,7 @@ logger = fetcher_logger("Fetcher")
 
 
 class BaseFetcher:
-    # 类级别的 rate limiter，所有实例共享
+    # Class-level rate limiter, shared across all instances
     _rate_limiter = PassiveRateLimiter()
 
     def __init__(
@@ -111,7 +111,7 @@ class BaseFetcher:
 
     async def request_api(self, url: str, method: str = "GET", **kwargs) -> dict:
         """
-        发送 API 请求，支持被动速率限制
+        Send API request with passive rate limiting support.
         """
         await self.ensure_valid_access_token()
 
@@ -119,7 +119,7 @@ class BaseFetcher:
         attempt = 0
 
         while attempt < 2:
-            # 在发送请求前等待速率限制
+            # Wait for rate limit before sending request
             await self._rate_limiter.wait_if_limited()
 
             request_headers = {**headers, **self.header}
@@ -137,22 +137,22 @@ class BaseFetcher:
                     return response.json()
 
                 except HTTPStatusError as e:
-                    # 处理 429 速率限制响应
+                    # Handle 429 rate limit response
                     if e.response.status_code == 429:
                         retry_after = e.response.headers.get("Retry-After")
                         logger.warning(f"Rate limited for {url}, Retry-After: {retry_after}")
                         await self._rate_limiter.handle_rate_limit(retry_after)
-                        # 速率限制后重试当前请求（不增加 attempt）
+                        # Retry current request after rate limiting (without incrementing attempt)
                         continue
 
-                    # 处理 401 未授权响应
+                    # Handle 401 unauthorized response
                     if e.response.status_code == 401:
                         attempt += 1
                         logger.warning(f"Received 401 error for {url}, attempt {attempt}")
                         await self._handle_unauthorized()
                         continue
 
-                    # 其他 HTTP 错误直接抛出
+                    # Re-raise other HTTP errors directly
                     raise
 
         await self._clear_access_token()

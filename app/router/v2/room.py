@@ -29,10 +29,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 @router.get(
     "/rooms",
-    tags=["房间"],
+    tags=["Rooms"],
     responses={
         200: api_doc(
-            "房间列表",
+            "Room list",
             list[RoomModel],
             [
                 "current_playlist_item.beatmap.beatmapset",
@@ -43,8 +43,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
             ],
         )
     },
-    name="获取房间列表",
-    description="获取房间列表。支持按状态/模式筛选",
+    name="Get Room List",
+    description="Get room list. Supports filtering by status/mode",
 )
 async def get_all_rooms(
     db: Database,
@@ -52,16 +52,16 @@ async def get_all_rooms(
     mode: Annotated[
         Literal["open", "ended", "participated", "owned"] | None,
         Query(
-            description=("房间模式：open 当前开放 / ended 已经结束 / participated 参与过 / owned 自己创建的房间"),
+            description=("Room mode: open (currently open) / ended (finished) / participated (previously joined) / owned (created by self)"),
         ),
     ] = "open",
     category: Annotated[
         RoomCategory,
         Query(
-            description=("房间分类：NORMAL 普通歌单模式房间 / REALTIME 多人游戏房间 / DAILY_CHALLENGE 每日挑战"),
+            description=("Room category: NORMAL (playlist room) / REALTIME (multiplayer room) / DAILY_CHALLENGE (daily challenge)"),
         ),
     ] = RoomCategory.NORMAL,
-    status: Annotated[RoomStatus | None, Query(description="房间状态（可选）")] = None,
+    status: Annotated[RoomStatus | None, Query(description="Room status (optional)")] = None,
 ):
     resp_list = []
     where_clauses: list[ColumnElement[bool]] = [col(Room.category) == category, col(Room.type) != MatchType.MATCHMAKING]
@@ -150,12 +150,12 @@ async def _participate_room(room_id: int, user_id: int, db_room: Room, session: 
 
 @router.post(
     "/rooms",
-    tags=["房间"],
-    name="创建房间",
-    description="\n创建一个新的房间。",
+    tags=["Rooms"],
+    name="Create Room",
+    description="\nCreate a new room.",
     responses={
         200: api_doc(
-            "创建的房间信息",
+            "Created room info",
             RoomModel,
             Room.SHOW_RESPONSE_INCLUDES,
         )
@@ -207,25 +207,25 @@ async def create_room(
 
 @router.get(
     "/rooms/{room_id}",
-    tags=["房间"],
+    tags=["Rooms"],
     responses={
         200: api_doc(
-            "房间详细信息",
+            "Room details",
             RoomModel,
             Room.SHOW_RESPONSE_INCLUDES,
         )
     },
-    name="获取房间详情",
-    description="获取指定房间详情。",
+    name="Get Room Details",
+    description="Get details for the specified room.",
 )
 async def get_room(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
     current_user: Annotated[User, Security(get_current_user, scopes=["public"])],
     category: Annotated[
         str,
         Query(
-            description=("房间分类：NORMAL 普通歌单模式房间 / REALTIME 多人游戏房间 / DAILY_CHALLENGE 每日挑战 (可选)"),
+            description=("Room category: NORMAL (playlist room) / REALTIME (multiplayer room) / DAILY_CHALLENGE (daily challenge) (optional)"),
         ),
     ] = "",
 ):
@@ -239,13 +239,13 @@ async def get_room(
 
 @router.delete(
     "/rooms/{room_id}",
-    tags=["房间"],
-    name="结束房间",
-    description="\n结束歌单模式房间。",
+    tags=["Rooms"],
+    name="End Room",
+    description="\nEnd playlist room.",
 )
 async def delete_room(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
     current_user: ClientUser,
 ):
     if await current_user.is_restricted(db):
@@ -262,14 +262,14 @@ async def delete_room(
 
 @router.put(
     "/rooms/{room_id}/users/{user_id}",
-    tags=["房间"],
-    name="加入房间",
-    description="\n加入指定歌单模式房间。",
+    tags=["Rooms"],
+    name="Join Room",
+    description="\nJoin specified playlist room.",
 )
 async def add_user_to_room(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
-    user_id: Annotated[int, Path(..., description="用户 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
+    user_id: Annotated[int, Path(..., description="User ID")],
     redis: Redis,
     current_user: ClientUser,
 ):
@@ -290,14 +290,14 @@ async def add_user_to_room(
 
 @router.delete(
     "/rooms/{room_id}/users/{user_id}",
-    tags=["房间"],
-    name="离开房间",
-    description="\n离开指定歌单模式房间。",
+    tags=["Rooms"],
+    name="Leave Room",
+    description="\nLeave specified playlist room.",
 )
 async def remove_user_from_room(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
-    user_id: Annotated[int, Path(..., description="用户 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
+    user_id: Annotated[int, Path(..., description="User ID")],
     current_user: ClientUser,
     redis: Redis,
 ):
@@ -327,12 +327,12 @@ async def remove_user_from_room(
 
 @router.get(
     "/rooms/{room_id}/leaderboard",
-    tags=["房间"],
-    name="获取房间排行榜",
-    description="获取房间内累计得分排行榜。",
+    tags=["Rooms"],
+    name="Get Room Leaderboard",
+    description="Get cumulative score leaderboard for the room.",
     responses={
         200: api_doc(
-            "房间排行榜",
+            "Room leaderboard",
             {
                 "leaderboard": list[ItemAttemptsCountModel],
                 "user_score": ItemAttemptsCountModel | None,
@@ -344,7 +344,7 @@ async def remove_user_from_room(
 )
 async def get_room_leaderboard(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
     current_user: Annotated[User, Security(get_current_user, scopes=["public"])],
 ):
     db_room = (await db.exec(select(Room).where(Room.id == room_id))).first()
@@ -374,12 +374,12 @@ async def get_room_leaderboard(
 
 @router.get(
     "/rooms/{room_id}/events",
-    tags=["房间"],
-    name="获取房间事件",
-    description="获取房间事件列表 （倒序，可按 after / before 进行范围截取）。",
+    tags=["Rooms"],
+    name="Get Room Events",
+    description="Get list of room events (descending, filterable by after / before range).",
     responses={
         200: api_doc(
-            "房间事件",
+            "Room events",
             {
                 "beatmaps": list[BeatmapModel],
                 "beatmapsets": list[BeatmapsetModel],
@@ -398,11 +398,11 @@ async def get_room_leaderboard(
 )
 async def get_room_events(
     db: Database,
-    room_id: Annotated[int, Path(..., description="房间 ID")],
+    room_id: Annotated[int, Path(..., description="Room ID")],
     current_user: Annotated[User, Security(get_current_user, scopes=["public"])],
-    limit: Annotated[int, Query(ge=1, le=1000, description="返回条数 (1-1000)")] = 100,
-    after: Annotated[int | None, Query(ge=0, description="仅包含大于该事件 ID 的事件")] = None,
-    before: Annotated[int | None, Query(ge=0, description="仅包含小于该事件 ID 的事件")] = None,
+    limit: Annotated[int, Query(ge=1, le=1000, description="Return count (1-1000)")] = 100,
+    after: Annotated[int | None, Query(ge=0, description="Only include events with ID greater than this value")] = None,
+    before: Annotated[int | None, Query(ge=0, description="Only include events with ID less than this value")] = None,
 ):
     events = (
         await db.exec(

@@ -83,30 +83,30 @@ async def _get_beatmap_raw_for_recalc(fetcher: Fetcher, redis: Redis, beatmap: B
 
 
 class BeatmapCacheManager:
-    """管理beatmap缓存，确保不超过指定数量
+    """Manages beatmap cache to ensure it does not exceed the specified limit.
 
-    优化：
-    1. 将清理操作移到锁外，减少持锁时间
-    2. 使用 LRU 策略，已存在的 beatmap 移到最后
+    Optimizations:
+    1. Move cleanup operations outside the lock to reduce lock contention time.
+    2. Use an LRU policy, moving accessed beatmaps to the end.
     """
 
     def __init__(self, max_count: int, additional_count: int, redis: Redis):
         self.max_count = max_count
         self.additional_count = additional_count
         self.redis = redis
-        self.beatmap_ids: list[int] = []  # 记录处理的beatmap id（按顺序）
-        self.beatmap_id_set: set[int] = set()  # 用于快速查找（唯一性）
+        self.beatmap_ids: list[int] = []  # Tracks processed beatmap IDs (in order)
+        self.beatmap_id_set: set[int] = set()  # Used for fast lookup (uniqueness)
         self.lock = asyncio.Lock()
 
     async def add_beatmap(self, beatmap_id: int) -> None:
-        """添加beatmap到缓存跟踪列表（LRU策略）"""
-        if self.max_count <= 0:  # 不限制
+        """Add beatmap to cache tracking list (LRU strategy)."""
+        if self.max_count <= 0:  # No limit
             return
 
         to_remove: list[int] = []
 
         async with self.lock:
-            # 如果已经存在，更新其位置（移到最后，表示最近使用）
+            # If already exists, update its position (move to end, representing most recently used)
             if beatmap_id in self.beatmap_id_set:
                 with contextlib.suppress(ValueError):
                     self.beatmap_ids.remove(beatmap_id)
@@ -116,36 +116,36 @@ class BeatmapCacheManager:
             self.beatmap_ids.append(beatmap_id)
             self.beatmap_id_set.add(beatmap_id)
 
-            # 检查是否需要清理
+            # Check if cleanup is needed
             threshold = self.max_count + max(0, self.additional_count)
             if len(self.beatmap_ids) > threshold:
-                # 计算需要删除的数量
+                # Calculate number to remove
                 to_remove_count = max(1, self.additional_count)
-                # 获取要删除的 beatmap ids（最旧的）
+                # Get beatmap IDs to remove (oldest)
                 to_remove = self.beatmap_ids[:to_remove_count]
                 self.beatmap_ids = self.beatmap_ids[to_remove_count:]
-                # 从 set 中移除
+                # Remove from set
                 for bid in to_remove:
                     self.beatmap_id_set.discard(bid)
 
-        # 在锁外执行清理（避免阻塞其他协程）
+        # Perform cleanup outside lock (avoids blocking other coroutines)
         if to_remove:
             await self._cleanup_async(to_remove)
 
     async def _cleanup_async(self, to_remove: list[int]) -> None:
-        """异步清理 beatmap 缓存（在锁外执行）"""
+        """Asynchronously clean up beatmap cache (executed outside lock)."""
         if not to_remove:
             return
 
         try:
-            # 从 Redis 中删除缓存
+            # Delete cache from Redis
             await clear_cached_beatmap_raws(self.redis, to_remove)
             logger.info(f"Cleaned up {len(to_remove)} beatmap caches (remaining: {len(self.beatmap_ids)})")
         except Exception as e:
             logger.warning(f"Failed to cleanup {len(to_remove)} beatmap caches: {e}")
 
     def get_stats(self) -> dict:
-        """获取统计信息"""
+        """Get statistics."""
         threshold = self.max_count + max(0, self.additional_count) if self.max_count > 0 else "unlimited"
         return {
             "total_beatmaps": len(self.beatmap_ids),
@@ -697,7 +697,7 @@ async def recalc_score_pp(
 
         try:
             beatmap_raw = await _get_beatmap_raw_for_recalc(fetcher, redis, beatmap)
-            # 记录使用的beatmap
+            # Record used beatmap
             if cache_manager:
                 await cache_manager.add_beatmap(score.beatmap_id)
             new_pp = await calculate_pp(score, beatmap_raw, session)
@@ -1149,7 +1149,7 @@ async def recalculate_beatmap_rating(
             while attempts > 0:
                 try:
                     ruleset = GameMode(beatmap.mode) if isinstance(beatmap.mode, int) else beatmap.mode
-                    # 添加整体超时保护（30秒），防止单个请求卡死
+                    # Add overall timeout protection (30s) to prevent single requests from hanging
                     try:
                         attributes = await asyncio.wait_for(
                             calculate_beatmap_attributes(beatmap_id, ruleset, [], redis, fetcher), timeout=30.0
@@ -1158,7 +1158,7 @@ async def recalculate_beatmap_rating(
                         logger.error(f"Timeout calculating attributes for beatmap {beatmap_id} after 30s")
                         return
 
-                    # 记录使用的beatmap
+                    # Record used beatmap
                     if cache_manager:
                         await cache_manager.add_beatmap(beatmap_id)
                     beatmap.difficulty_rating = attributes.star_rating
@@ -1245,7 +1245,7 @@ async def recalculate_performance(
         logger.info("No targets matched the provided filters; nothing to recalculate")
         return
 
-    # 创建缓存管理器
+    # Create cache manager
     cache_manager = BeatmapCacheManager(
         max_count=global_config.max_cached_beatmaps_count,
         additional_count=global_config.additional_count,
@@ -1272,7 +1272,7 @@ async def recalculate_performance(
         ]
         await run_in_batches(coroutines, global_config.concurrency)
 
-    # 显示最终统计
+    # Display final stats
     logger.info(f"Beatmap cache final stats: {cache_manager.get_stats()}")
 
 
@@ -1332,7 +1332,7 @@ async def recalculate_rating(
         logger.info("No beatmaps matched the provided filters; nothing to recalculate")
         return
 
-    # 创建缓存管理器
+    # Create cache manager
     cache_manager = BeatmapCacheManager(
         max_count=global_config.max_cached_beatmaps_count,
         additional_count=global_config.additional_count,
@@ -1357,7 +1357,7 @@ async def recalculate_rating(
         ]
         await run_in_batches(coroutines, global_config.concurrency)
 
-    # 显示最终统计
+    # Display final stats
     logger.info(f"Beatmap cache final stats: {cache_manager.get_stats()}")
 
 

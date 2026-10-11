@@ -462,12 +462,12 @@ class UserModel(DatabaseModel[UserDict]):
     @field_validator("playmode", mode="before")
     @classmethod
     def validate_playmode(cls, v):
-        """将字符串转换为 GameMode 枚举"""
+        """Convert string to GameMode enum"""
         if isinstance(v, str):
             try:
                 return GameMode(v)
             except ValueError:
-                # 如果转换失败，返回默认值
+                # If conversion fails, return default value
                 return GameMode.OSU
         return v
 
@@ -1140,8 +1140,8 @@ class User(AsyncAttrs, UserModel, table=True):
         return active_restrictions or False
 
 
-# 为了向后兼容，在 SQL 查询中使用 User
-# 例如: select(User).where(User.id == 1)
-# 但类型注解和返回值使用 User
-# 例如: async def get_user() -> User | None:
+# For backwards compatibility, use User in SQL queries
+# e.g.: select(User).where(User.id == 1)
+# But use User in type annotations and return values
+# e.g.: async def get_user() -> User | None:
 #           return (await session.exec(select(User)...)).first()

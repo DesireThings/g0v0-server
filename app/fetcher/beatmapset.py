@@ -109,15 +109,15 @@ class BeatmapsetFetcher(BaseFetcher):
 
     @staticmethod
     def _get_homepage_queries() -> list[tuple[SearchQueryModel, Cursor]]:
-        """获取主页预缓存查询列表"""
-        # 主页常用查询组合
+        """Get list of homepage pre-cache queries."""
+        # Common homepage query combinations
         homepage_queries = []
 
-        # 主要排序方式
+        # Primary sort options
         sorts = ["ranked_desc", "updated_desc", "favourites_desc", "plays_desc"]
 
         for sort in sorts:
-            # 第一页 - 使用最小参数集合以匹配用户请求
+            # Page 1 - use minimal parameter set to match user requests
             query = SearchQueryModel(
                 q="",
                 s="leaderboard",
@@ -129,24 +129,24 @@ class BeatmapsetFetcher(BaseFetcher):
 
     @staticmethod
     def _generate_cache_key(query: SearchQueryModel, cursor: Cursor) -> str:
-        """生成搜索缓存键"""
-        # 只包含核心查询参数，忽略默认值
+        """Generate search cache key."""
+        # Include only core query parameters, ignore default values
         cache_data = {}
 
-        # 添加非默认/非空的查询参数
+        # Add non-default/non-empty query parameters
         if query.q:
             cache_data["q"] = query.q
-        if query.s != "leaderboard":  # 只有非默认值才加入
+        if query.s != "leaderboard":  # Only add if non-default
             cache_data["s"] = query.s
         if hasattr(query, "sort") and query.sort:
             cache_data["sort"] = query.sort
-        if query.nsfw is not False:  # 只有非默认值才加入
+        if query.nsfw is not False:  # Only add if non-default
             cache_data["nsfw"] = query.nsfw
         if query.m is not None:
             cache_data["m"] = query.m
         if query.c:
             cache_data["c"] = query.c
-        if query.l != "any":  # 检查语言默认值
+        if query.l != "any":  # Check language default value
             cache_data["l"] = query.l
         if query.e:
             cache_data["e"] = query.e
@@ -158,11 +158,11 @@ class BeatmapsetFetcher(BaseFetcher):
         if query_is_local:
             cache_data["is_local"] = query_is_local
 
-        # 添加 cursor
+        # Add cursor
         if cursor:
             cache_data["cursor"] = cursor
 
-        # 序列化为 JSON 并生成 MD5 哈希
+        # Serialize to JSON and generate MD5 hash
         cache_json = json.dumps(cache_data, sort_keys=True, separators=(",", ":"))
         cache_hash = hashlib.md5(cache_json.encode(), usedforsecurity=False).hexdigest()
 
@@ -172,13 +172,13 @@ class BeatmapsetFetcher(BaseFetcher):
 
     @staticmethod
     def _encode_cursor(cursor_dict: dict[str, int | float]) -> str:
-        """将cursor字典编码为base64字符串"""
+        """Encode cursor dictionary to base64 string."""
         cursor_json = json.dumps(cursor_dict, separators=(",", ":"))
         return base64.b64encode(cursor_json.encode()).decode()
 
     @staticmethod
     def _decode_cursor(cursor_string: str) -> dict[str, int | float]:
-        """将base64字符串解码为cursor字典"""
+        """Decode base64 string to cursor dictionary."""
         try:
             cursor_json = base64.b64decode(cursor_string).decode()
             return json.loads(cursor_json)
@@ -319,10 +319,10 @@ class BeatmapsetFetcher(BaseFetcher):
     ) -> SearchBeatmapsetsResp:
         logger.opt(colors=True).debug(f"search_beatmapset: <y>{query}</y>")
 
-        # 生成缓存键
+        # Generate cache key
         cache_key = self._generate_cache_key(query, cursor)
 
-        # 尝试从缓存获取结果
+        # Try to get result from cache
         cached_result = await redis_client.get(cache_key)
         if cached_result:
             logger.opt(colors=True).debug(f"Cache hit for key: <y>{cache_key}</y>")
@@ -336,7 +336,7 @@ class BeatmapsetFetcher(BaseFetcher):
             except Exception as e:
                 logger.warning(f"Cache data invalid, fetching from API: {e}")
 
-        # 缓存未命中，从 API 获取数据
+        # Cache miss, fetch data from API
         logger.debug("Cache miss, fetching from API")
 
         params = query.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
@@ -359,13 +359,13 @@ class BeatmapsetFetcher(BaseFetcher):
             if isinstance(beatmapset, dict):
                 self._ensure_local_flags(beatmapset)
 
-        # 处理响应中的cursor信息
+        # Process cursor info in response
         if api_response.get("cursor"):
             cursor_dict = api_response["cursor"]
             api_response["cursor_string"] = self._encode_cursor(cursor_dict)
 
-        # 将结果缓存 15 分钟
-        cache_ttl = 15 * 60  # 15 分钟
+        # Cache result for 15 minutes
+        cache_ttl = 15 * 60  # 15 minutes
         await redis_client.set(cache_key, json.dumps(api_response, separators=(",", ":")), ex=cache_ttl)
 
         logger.opt(colors=True).debug(f"Cached result for key: <y>{cache_key}</y> (TTL: {cache_ttl}s)")
@@ -376,15 +376,15 @@ class BeatmapsetFetcher(BaseFetcher):
 
         resp = SearchBeatmapsetsResp.model_validate(api_response)
 
-        # 智能预取：只在用户明确搜索时才预取，避免过多API请求
-        # 且只在有搜索词或特定条件时预取，避免首页浏览时的过度预取
+        # Smart prefetching: only prefetch when user explicitly searches to avoid excessive API requests,
+        # and only when search keywords or specific criteria are present to avoid over-fetching on homepage browsing.
         if api_response.get("cursor") and (query.q or query.s != "leaderboard" or cursor):
-            # 在后台预取下1页（减少预取量）
+            # Prefetch next 1 page in background (reduce prefetch volume)
             import asyncio
 
-            # 不立即创建任务，而是延迟一段时间再预取
+            # Do not create task immediately; delay a period before prefetching
             async def delayed_prefetch():
-                await asyncio.sleep(3.0)  # 延迟3秒
+                await asyncio.sleep(3.0)  # Delay 3 seconds
                 await self.prefetch_next_pages(query, api_response["cursor"], redis_client, pages=1)
 
             bg_tasks.add_task(delayed_prefetch)
@@ -398,25 +398,25 @@ class BeatmapsetFetcher(BaseFetcher):
         redis_client: redis.Redis,
         pages: int = 3,
     ) -> None:
-        """预取下几页内容"""
+        """Prefetch next few pages of content."""
         if not current_cursor:
             return
 
         cursor = current_cursor.copy()
 
         for page in range(1, pages + 1):
-            # 使用当前 cursor 请求下一页
+            # Request next page using current cursor
             next_query = query.model_copy()
 
             logger.debug(f"Prefetching page {page + 1}")
 
-            # 生成下一页的缓存键
+            # Generate cache key for next page
             next_cache_key = self._generate_cache_key(next_query, cursor)
 
-            # 检查是否已经缓存
+            # Check if already cached
             if await redis_client.exists(next_cache_key):
                 logger.debug(f"Page {page + 1} already cached")
-                # 尝试从缓存获取cursor继续预取
+                # Try to get cursor from cache to continue prefetching
                 cached_data = await redis_client.get(next_cache_key)
                 if cached_data:
                     try:
@@ -428,11 +428,11 @@ class BeatmapsetFetcher(BaseFetcher):
                         logger.warning("Failed to parse cached data for cursor")
                 break
 
-            # 在预取页面之间添加延迟，避免突发请求
+            # Add delay between prefetch pages to prevent burst requests
             if page > 1:
-                await asyncio.sleep(1.5)  # 1.5秒延迟
+                await asyncio.sleep(1.5)  # 1.5 seconds delay
 
-            # 请求下一页数据
+            # Request next page data
             params = next_query.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
 
             # filtros nuestros: osu! no los conoce y no tienen por que llegarle.
@@ -450,17 +450,17 @@ class BeatmapsetFetcher(BaseFetcher):
                 if isinstance(beatmapset, dict):
                     self._ensure_local_flags(beatmapset)
 
-            # 处理响应中的cursor信息
+            # Process cursor info in response
             if api_response.get("cursor"):
                 cursor_dict = api_response["cursor"]
                 api_response["cursor_string"] = self._encode_cursor(cursor_dict)
-                cursor = cursor_dict  # 更新cursor用于下一页
+                cursor = cursor_dict  # Update cursor for next page
             else:
-                # 没有更多页面了
+                # No more pages
                 break
 
-            # 缓存结果（较短的TTL用于预取）
-            prefetch_ttl = 10 * 60  # 10 分钟
+            # Cache result (shorter TTL for prefetched data)
+            prefetch_ttl = 10 * 60  # 10 minutes
             await redis_client.set(
                 next_cache_key,
                 json.dumps(api_response, separators=(",", ":")),
@@ -470,25 +470,25 @@ class BeatmapsetFetcher(BaseFetcher):
             logger.debug(f"Prefetched page {page + 1} (TTL: {prefetch_ttl}s)")
 
     async def warmup_homepage_cache(self, redis_client: redis.Redis) -> None:
-        """预热主页缓存"""
+        """Warm up homepage cache."""
         homepage_queries = self._get_homepage_queries()
 
         logger.info(f"Starting homepage cache warmup ({len(homepage_queries)} queries)")
 
         for i, (query, cursor) in enumerate(homepage_queries):
             try:
-                # 在请求之间添加延迟，避免突发请求
+                # Add delay between requests to prevent burst requests
                 if i > 0:
                     await asyncio.sleep(5.0)  # 5s delay — gentler on osu! API rate limit
 
                 cache_key = self._generate_cache_key(query, cursor)
 
-                # 检查是否已经缓存
+                # Check if already cached
                 if await redis_client.exists(cache_key):
                     logger.debug(f"Query {query.sort} already cached")
                     continue
 
-                # 请求并缓存
+                # Request and cache
                 params = query.model_dump(exclude_none=True, exclude_unset=True, exclude_defaults=True)
 
                 # filtros nuestros: osu! no los conoce y no tienen por que llegarle.
@@ -504,7 +504,7 @@ class BeatmapsetFetcher(BaseFetcher):
                     cursor_dict = api_response["cursor"]
                     api_response["cursor_string"] = self._encode_cursor(cursor_dict)
 
-                # 缓存结果 — long TTL so we don't re-fetch too aggressively
+                # Cache result — long TTL so we don't re-fetch too aggressively
                 cache_ttl = 90 * 60  # 90 minutes
                 await redis_client.set(
                     cache_key,

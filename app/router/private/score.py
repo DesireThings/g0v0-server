@@ -22,8 +22,8 @@ if settings.allow_delete_scores:
 
     @router.delete(
         "/score/{score_id}",
-        name="删除指定ID的成绩",
-        tags=["成绩", "g0v0 API"],
+        name="Delete Score by ID",
+        tags=["Scores", "g0v0 API"],
         status_code=204,
     )
     async def delete_score(
@@ -34,15 +34,15 @@ if settings.allow_delete_scores:
         current_user: ClientUser,
         storage_service: StorageService,
     ):
-        """删除成绩
+        """Delete score
 
-        删除成绩，同时删除对应的统计信息、排行榜分数、pp、回放文件
+        Deletes score along with associated statistics, leaderboard scores, pp, and replay file.
 
-        参数:
-        - score_id: 成绩ID
+        Parameters:
+        - score_id: Score ID
 
-        错误情况:
-        - 404: 找不到指定成绩
+        Error cases:
+        - 404: Score not found
         """
         if await current_user.is_restricted(session):
             # avoid deleting the evidence of cheating
@@ -50,7 +50,7 @@ if settings.allow_delete_scores:
 
         score = await session.get(Score, score_id)
         if not score or score.user_id != current_user.id:
-            raise HTTPException(status_code=404, detail="找不到指定成绩")
+            raise HTTPException(status_code=404, detail="Score not found")
 
         gamemode = score.gamemode
         user_id = score.user_id

@@ -1,4 +1,4 @@
-"""缓存相关的 APScheduler 任务入口。"""
+"""APScheduler task entrypoints related to cache."""
 
 import asyncio
 from datetime import UTC, timedelta
@@ -29,7 +29,7 @@ CACHE_JOB_IDS: Final[dict[str, str]] = {
 
 
 async def warmup_cache() -> None:
-    """执行缓存预热"""
+    """Execute cache warmup."""
     try:
         logger.info("Starting beatmap cache warmup...")
 
@@ -45,7 +45,7 @@ async def warmup_cache() -> None:
 
 
 async def refresh_ranking_cache() -> None:
-    """刷新排行榜缓存"""
+    """Refresh leaderboard cache."""
     try:
         logger.info("Starting ranking cache refresh...")
 
@@ -63,7 +63,7 @@ async def refresh_ranking_cache() -> None:
 
 
 async def schedule_user_cache_preload_task() -> None:
-    """定时用户缓存预加载任务"""
+    """Scheduled user cache preload task."""
     if not settings.enable_user_cache_preload:
         return
 
@@ -103,7 +103,7 @@ async def schedule_user_cache_preload_task() -> None:
 
 
 async def schedule_user_cache_warmup_task() -> None:
-    """定时用户缓存预热任务 - 预加载排行榜前100用户"""
+    """Scheduled user cache warmup task - preloads top 100 users on leaderboard."""
     try:
         logger.info("Starting user cache warmup task...")
 
@@ -145,7 +145,7 @@ async def schedule_user_cache_warmup_task() -> None:
 
 
 async def schedule_user_cache_cleanup_task() -> None:
-    """定时用户缓存清理任务"""
+    """Scheduled user cache cleanup task."""
     try:
         logger.info("Starting user cache cleanup task...")
 
@@ -162,7 +162,7 @@ async def schedule_user_cache_cleanup_task() -> None:
 
 
 async def warmup_user_cache() -> None:
-    """用户缓存预热"""
+    """User cache warmup."""
     try:
         await schedule_user_cache_warmup_task()
     except Exception as e:
@@ -170,7 +170,7 @@ async def warmup_user_cache() -> None:
 
 
 async def preload_user_cache() -> None:
-    """用户缓存预加载"""
+    """User cache preload."""
     try:
         await schedule_user_cache_preload_task()
     except Exception as e:
@@ -178,7 +178,7 @@ async def preload_user_cache() -> None:
 
 
 async def cleanup_user_cache() -> None:
-    """用户缓存清理"""
+    """User cache cleanup."""
     try:
         await schedule_user_cache_cleanup_task()
     except Exception as e:
@@ -186,7 +186,7 @@ async def cleanup_user_cache() -> None:
 
 
 def register_cache_jobs() -> None:
-    """注册缓存相关 APScheduler 任务"""
+    """Register cache-related APScheduler jobs."""
     scheduler = get_scheduler()
 
     scheduler.add_job(
@@ -253,13 +253,13 @@ def register_cache_jobs() -> None:
 
 
 async def start_cache_tasks() -> None:
-    """注册 APScheduler 任务并执行启动时任务"""
+    """Register APScheduler jobs and run startup tasks."""
     register_cache_jobs()
     logger.info("Cache APScheduler jobs registered; running initial tasks")
 
 
 async def stop_cache_tasks() -> None:
-    """移除 APScheduler 任务"""
+    """Remove APScheduler jobs."""
     scheduler = get_scheduler()
     for job_id in CACHE_JOB_IDS.values():
         try:

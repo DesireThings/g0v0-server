@@ -26,14 +26,14 @@ def new_paragraph(name: str, has_sub_paragraph: bool) -> None:
     if desc := Settings.model_config["json_schema_extra"]["paragraphs_desc"].get(name):  # type: ignore
         doc.append(desc)
     if not has_sub_paragraph:
-        doc.append("| 变量名 | 描述 | 类型 | 默认值 |")
+        doc.append("| Variable Name | Description | Type | Default Value |")
         doc.append("|------|------|--------|------|")
 
 
 def new_sub_paragraph(name: str) -> None:
     doc.append("")
     doc.append(f"### {name}")
-    doc.append("| 变量名 | 描述 | 类型 | 默认值 |")
+    doc.append("| Variable Name | Description | Type | Default Value |")
     doc.append("|------|------|--------|------|")
 
 
@@ -129,10 +129,10 @@ doc.extend(
     [
         SPECTATOR_DOC,
         "",
-        f"> 上次生成：{datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S %Z')} "
-        f"于提交 {f'[`{commit}`](https://github.com/GooGuTeam/g0v0-server/commit/{commit})' if commit != 'unknown' else 'unknown'}",  # noqa: E501
+        f"> Last generated: {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S %Z')} "
+        f"at commit {f'[`{commit}`](https://github.com/GooGuTeam/g0v0-server/commit/{commit})' if commit != 'unknown' else 'unknown'}",  # noqa: E501
         "",
-        "> **注意: 在生产环境中，请务必更改默认的密钥和密码！**",
+        "> **Note: In production environments, be sure to change default secrets and passwords!**",
     ]
 )
 print("\n".join(doc))

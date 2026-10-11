@@ -1,6 +1,6 @@
 """
-Beatmap缓存预取服务
-用于提前缓存热门beatmap，减少成绩计算时的获取延迟
+Beatmap cache prefetch service.
+Used to pre-cache popular beatmaps to reduce retrieval latency during score calculation.
 """
 
 import asyncio
@@ -28,7 +28,7 @@ class BeatmapCacheService:
 
     async def preload_popular_beatmaps(self, session: AsyncSession, limit: int = 100):
         """
-        预加载热门beatmap到Redis缓存
+        Preload popular beatmaps into Redis cache.
         """
         if self._preloading:
             logger.info("Beatmap preloading already in progress")
@@ -38,7 +38,7 @@ class BeatmapCacheService:
         try:
             logger.info(f"Starting preload of top {limit} popular beatmaps")
 
-            # 获取过去24小时内最热门的beatmap
+            # Get the most popular beatmaps from the past 24 hours
             recent_time = utcnow() - timedelta(hours=24)
 
             from app.database.score import Score
@@ -53,7 +53,7 @@ class BeatmapCacheService:
                 )
             ).all()
 
-            # 并发预取这些beatmap
+            # Concurrently prefetch these beatmaps
             preload_tasks = []
             for beatmap_id, _ in popular_beatmaps:
                 task = self._preload_single_beatmap(beatmap_id)
@@ -71,16 +71,16 @@ class BeatmapCacheService:
 
     async def _preload_single_beatmap(self, beatmap_id: int) -> bool:
         """
-        预加载单个beatmap
+        Preload a single beatmap.
         """
         try:
             cache_key = f"beatmap:{beatmap_id}:raw"
             if await self.redis.exists(cache_key):
-                # 已经在缓存中，延长过期时间
+                # Already in cache, extend expiration time
                 await self.redis.expire(cache_key, 60 * 60 * 24)
                 return True
 
-            # 获取并缓存beatmap
+            # Fetch and cache beatmap
             content = await self.fetcher.get_beatmap_raw(beatmap_id)
             await self.redis.set(cache_key, content, ex=60 * 60 * 24)
             return True
@@ -91,7 +91,7 @@ class BeatmapCacheService:
 
     async def smart_preload_for_score(self, beatmap_id: int):
         """
-        智能预加载：为即将提交的成绩预加载beatmap
+        Smart preload: preload beatmap for upcoming score submissions.
         """
         task = asyncio.create_task(self._preload_single_beatmap(beatmap_id))
         self._background_tasks.add(task)
@@ -99,13 +99,13 @@ class BeatmapCacheService:
 
     async def get_cache_stats(self) -> dict:
         """
-        获取缓存统计信息
+        Get cache statistics.
         """
         try:
             keys = await self.redis.keys("beatmap:*:raw")
             total_size = 0
 
-            for key in keys[:100]:  # 限制检查数量以避免性能问题
+            for key in keys[:100]:  # Limit number of checked keys to avoid performance issues
                 try:
                     size = await self.redis.memory_usage(key)
                     if size:
@@ -125,24 +125,24 @@ class BeatmapCacheService:
 
     async def cleanup_old_cache(self, max_age_hours: int = 48):
         """
-        清理过期的缓存
+        Clean up expired cache.
         """
         try:
             logger.info(f"Cleaning up beatmap cache older than {max_age_hours} hours")
-            # Redis会自动清理过期的key，这里主要是记录日志
+            # Redis automatically evicts expired keys; this is primarily for logging
             keys = await self.redis.keys("beatmap:*:raw")
             logger.info(f"Current cache contains {len(keys)} beatmaps")
         except Exception as e:
             logger.error(f"Error during cache cleanup: {e}")
 
 
-# 全局缓存服务实例
+# Global cache service instance
 _cache_service: BeatmapCacheService | None = None
 
 
 def get_beatmap_cache_service(redis: Redis, fetcher: "Fetcher") -> BeatmapCacheService:
     """
-    获取beatmap缓存服务实例
+    Get beatmap cache service instance.
     """
     global _cache_service
     if _cache_service is None:
@@ -152,9 +152,9 @@ def get_beatmap_cache_service(redis: Redis, fetcher: "Fetcher") -> BeatmapCacheS
 
 async def schedule_preload_task(session: AsyncSession, redis: Redis, fetcher: "Fetcher"):
     """
-    定时预加载任务
+    Scheduled preload task.
     """
-    # 默认启用预加载，除非明确禁用
+    # Preload is enabled by default unless explicitly disabled
     if not settings.enable_beatmap_preload:
         return
 

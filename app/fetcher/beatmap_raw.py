@@ -33,7 +33,7 @@ RAW_TRANSIENT_CACHE_SECONDS = 60
 
 
 class NoBeatmapError(Exception):
-    """Beatmap 不存在异常"""
+    """Beatmap not found exception."""
 
     pass
 

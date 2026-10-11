@@ -1,5 +1,5 @@
 """
-用户登录记录服务
+User login log service.
 """
 
 import asyncio
@@ -16,7 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class LoginLogService:
-    """用户登录记录服务"""
+    """User login log service."""
 
     @staticmethod
     async def record_login(
@@ -31,20 +31,20 @@ class LoginLogService:
         notes: str | None = None,
     ) -> UserLoginLog:
         """
-        记录用户登录信息
+        Record user login information.
 
         Args:
-            db: 数据库会话
-            user_id: 用户ID
-            request: HTTP请求对象
-            login_success: 登录是否成功
-            login_method: 登录方式
-            notes: 备注信息
+            db: Database session.
+            user_id: User ID.
+            request: HTTP request object.
+            login_success: Whether login succeeded.
+            login_method: Login method.
+            notes: Note information.
 
         Returns:
-            UserLoginLog: 登录记录对象
+            UserLoginLog: Login log object.
         """
-        # 获取客户端IP并标准化格式
+        # Get client IP and normalize format
         raw_ip = get_client_ip(request)
         ip_address = normalize_ip(raw_ip)
 
@@ -56,7 +56,7 @@ class LoginLogService:
         else:
             resolved_user_agent = None
 
-        # 创建基本的登录记录
+        # Create base login log record
         resolved_client_hash = (client_hash or "").strip().lower()
         if resolved_client_hash:
             resolved_client_hash = resolved_client_hash[:128]
@@ -81,11 +81,11 @@ class LoginLogService:
             notes=notes,
         )
 
-        # 异步获取GeoIP信息
+        # Asynchronously fetch GeoIP information
         try:
             geoip = get_geoip_helper()
 
-            # 在后台线程中运行GeoIP查询（避免阻塞）
+            # Run GeoIP lookup in background thread (avoid blocking)
             loop = asyncio.get_event_loop()
             geo_info = await loop.run_in_executor(None, lambda: geoip.lookup(ip_address))
 
@@ -97,7 +97,7 @@ class LoginLogService:
                 login_log.longitude = geo_info.get("longitude", "")
                 login_log.time_zone = geo_info.get("time_zone", "")
 
-                # 处理 ASN（可能是字符串，需要转换为整数）
+                # Process ASN (may be string, convert to integer)
                 asn_value = geo_info.get("asn")
                 if asn_value is not None:
                     try:
@@ -114,7 +114,7 @@ class LoginLogService:
         except Exception as e:
             logger.warning(f"GeoIP lookup error for {ip_address}: {e}")
 
-        # 保存到数据库
+        # Save to database
         db.add(login_log)
         await db.commit()
         await db.refresh(login_log)
@@ -134,22 +134,22 @@ class LoginLogService:
         client_label: str | None = None,
     ) -> UserLoginLog:
         """
-        记录失败的登录尝试
+        Record failed login attempt.
 
         Args:
-            db: 数据库会话
-            request: HTTP请求对象
-            attempted_username: 尝试登录的用户名
-            login_method: 登录方式
-            notes: 备注信息
+            db: Database session.
+            request: HTTP request object.
+            attempted_username: Attempted username.
+            login_method: Login method.
+            notes: Note information.
 
         Returns:
-            UserLoginLog: 登录记录对象
+            UserLoginLog: Login log object.
         """
-        # 对于失败的登录，使用user_id=0表示未知用户
+        # For failed logins, use user_id=0 to represent unknown user
         return await LoginLogService.record_login(
             db=db,
-            user_id=0,  # 0表示未知/失败的登录
+            user_id=0,  # 0 indicates unknown/failed login
             request=request,
             login_success=False,
             login_method=login_method,
@@ -329,13 +329,13 @@ class LoginLogService:
 
 def get_request_info(request: Request) -> dict:
     """
-    提取请求的详细信息
+    Extract request details.
 
     Args:
-        request: HTTP请求对象
+        request: HTTP request object.
 
     Returns:
-        dict: 包含请求信息的字典
+        dict: Dictionary containing request information.
     """
     return {
         "ip": get_client_ip(request),

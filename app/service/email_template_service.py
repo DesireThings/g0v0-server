@@ -1,6 +1,6 @@
 """
-邮件模板服务
-使用 Jinja2 模板引擎，支持多语言邮件
+Email template service.
+Uses Jinja2 template engine, supports multi-language emails.
 """
 
 from datetime import datetime
@@ -14,23 +14,23 @@ from jinja2 import Environment, FileSystemLoader, Template
 
 
 class EmailTemplateService:
-    """邮件模板服务，支持多语言"""
+    """Email template service supporting multi-language."""
 
-    # 中文国家/地区代码列表
+    # Chinese language country/region code list
     CHINESE_COUNTRIES: ClassVar[list[str]] = [
-        "CN",  # 中国大陆
-        "TW",  # 台湾
-        "HK",  # 香港
-        "MO",  # 澳门
-        "SG",  # 新加坡（有中文使用者）
+        "CN",  # Mainland China
+        "TW",  # Taiwan
+        "HK",  # Hong Kong
+        "MO",  # Macau
+        "SG",  # Singapore (Chinese speakers)
     ]
 
     def __init__(self):
-        """初始化 Jinja2 模板引擎"""
-        # 模板目录路径
+        """Initialize Jinja2 template engine."""
+        # Template directory path
         template_dir = Path(__file__).parent.parent / "templates" / "email"
 
-        # 创建 Jinja2 环境
+        # Create Jinja2 environment
         self.env = Environment(
             loader=FileSystemLoader(str(template_dir)),
             autoescape=True,
@@ -42,21 +42,21 @@ class EmailTemplateService:
 
     def get_language(self, country_code: str | None) -> str:
         """
-        根据国家代码获取语言
+        Get language based on country code.
 
         Args:
-            country_code: ISO 3166-1 alpha-2 国家代码（如 CN, US）
+            country_code: ISO 3166-1 alpha-2 country code (e.g. CN, US).
 
         Returns:
-            语言代码（zh 或 en）
+            Language code (zh or en).
         """
         if not country_code:
             return "en"
 
-        # 转换为大写
+        # Convert to uppercase
         country_code = country_code.upper()
 
-        # 检查是否是中文国家/地区
+        # Check if Chinese-speaking country/region
         if country_code in self.CHINESE_COUNTRIES:
             return "zh"
 
@@ -69,27 +69,27 @@ class EmailTemplateService:
         context: dict[str, Any],
     ) -> str:
         """
-        渲染模板
+        Render template.
 
         Args:
-            template_name: 模板名称（不含语言后缀和扩展名）
-            language: 语言代码（zh 或 en）
-            context: 模板上下文数据
+            template_name: Template name (without language suffix or extension).
+            language: Language code (zh or en).
+            context: Template context data.
 
         Returns:
-            渲染后的模板内容
+            Rendered template content.
         """
         try:
-            # 构建模板文件名
+            # Construct template file name
             template_file = f"{template_name}_{language}.html"
 
-            # 加载并渲染模板
+            # Load and render template
             template: Template = self.env.get_template(template_file)
             return template.render(**context)
 
         except Exception as e:
             logger.error(f"Failed to render template {template_name}_{language}: {e}")
-            # 如果渲染失败且不是英文，尝试使用英文模板
+            # If rendering fails and not English, attempt to fallback to English template
             if language != "en":
                 logger.warning(f"Falling back to English template for {template_name}")
                 return self.render_template(template_name, "en", context)
@@ -102,27 +102,27 @@ class EmailTemplateService:
         context: dict[str, Any],
     ) -> str:
         """
-        渲染纯文本模板
+        Render plain text template.
 
         Args:
-            template_name: 模板名称（不含语言后缀和扩展名）
-            language: 语言代码（zh 或 en）
-            context: 模板上下文数据
+            template_name: Template name (without language suffix or extension).
+            language: Language code (zh or en).
+            context: Template context data.
 
         Returns:
-            渲染后的纯文本内容
+            Rendered plain text content.
         """
         try:
-            # 构建模板文件名
+            # Construct template file name
             template_file = f"{template_name}_{language}.txt"
 
-            # 加载并渲染模板
+            # Load and render template
             template: Template = self.env.get_template(template_file)
             return template.render(**context)
 
         except Exception as e:
             logger.error(f"Failed to render text template {template_name}_{language}: {e}")
-            # 如果渲染失败且不是英文，尝试使用英文模板
+            # If rendering fails and not English, attempt to fallback to English template
             if language != "en":
                 logger.warning(f"Falling back to English text template for {template_name}")
                 return self.render_text_template(template_name, "en", context)
@@ -136,21 +136,21 @@ class EmailTemplateService:
         expiry_minutes: int = 10,
     ) -> tuple[str, str, str]:
         """
-        渲染验证邮件
+        Render verification email.
 
         Args:
-            username: 用户名
-            code: 验证码
-            country_code: 国家代码
-            expiry_minutes: 验证码过期时间（分钟）
+            username: Username.
+            code: Verification code.
+            country_code: Country code.
+            expiry_minutes: Verification code expiry time in minutes.
 
         Returns:
-            (主题, HTML内容, 纯文本内容)
+            (subject, html_content, text_content)
         """
-        # 获取语言
+        # Get language
         language = self.get_language(country_code)
 
-        # 准备模板上下文
+        # Prepare template context
         context = {
             "username": username,
             "code": code,
@@ -159,25 +159,22 @@ class EmailTemplateService:
             "year": datetime.now().year,
         }
 
-        # 渲染 HTML 和纯文本模板
+        # Render HTML and plain text templates
         html_content = self.render_template("verification", language, context)
         text_content = self.render_text_template("verification", language, context)
 
-        # 根据语言设置主题
-        if language == "zh":
-            subject = f"邮箱验证 - {settings.from_name}"
-        else:
-            subject = f"Email Verification - {settings.from_name}"
+        # Set subject based on language
+        subject = f"Email Verification - {settings.from_name}"
 
         return subject, html_content, text_content
 
 
-# 全局邮件模板服务实例
+# Global email template service instance
 _email_template_service: EmailTemplateService | None = None
 
 
 def get_email_template_service() -> EmailTemplateService:
-    """获取或创建邮件模板服务实例"""
+    """Get or create email template service instance."""
     global _email_template_service
     if _email_template_service is None:
         _email_template_service = EmailTemplateService()

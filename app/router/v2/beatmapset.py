@@ -253,8 +253,8 @@ def _beatmapset_includes_for_user(user: User | None) -> list[str]:
 
 @router.get(
     "/beatmapsets/search",
-    name="搜索谱面集",
-    tags=["谱面集"],
+    name="Search Beatmapsets",
+    tags=["Beatmapsets"],
     response_model=SearchBeatmapsetsResp,
 )
 @asset_proxy_response
@@ -275,28 +275,28 @@ async def search_beatmapset(
     params = parse_qs(qs=request.url.query, keep_blank_values=True)
     cursor = {}
 
-    # 解析 cursor[field] 格式的参数
+    # Parse parameters in cursor[field] format
     for k, v in params.items():
         match = re.match(r"cursor\[(\w+)\]", k)
         if match:
             field_name = match.group(1)
             field_value = v[0] if v else None
             if field_value is not None:
-                # 转换为适当的类型
+                # Convert to appropriate type
                 try:
                     if field_name in ["approved_date", "id"]:
                         cursor[field_name] = int(field_value)
                     else:
-                        # 尝试转换为数字类型
+                        # Try converting to numeric type
                         try:
-                            # 首先尝试转换为整数
+                            # First try converting to integer
                             cursor[field_name] = int(field_value)
                         except ValueError:
                             try:
-                                # 然后尝试转换为浮点数
+                                # Then try converting to float
                                 cursor[field_name] = float(field_value)
                             except ValueError:
-                                # 最后保持字符串
+                                # Finally keep as string
                                 cursor[field_name] = field_value
                 except ValueError:
                     cursor[field_name] = field_value
@@ -312,11 +312,11 @@ async def search_beatmapset(
         # TODO: search locally
         return SearchBeatmapsetsResp(total=0, beatmapsets=[])
 
-    # 生成查询和游标的哈希用于缓存
+    # Generate hash of query and cursor for caching
     query_hash = generate_hash(query.model_dump())
     cursor_hash = generate_hash(cursor)
 
-    # 尝试从缓存获取搜索结果
+    # Try to get search results from cache
     # la parte de osu! se cachea sola; los mapas de aca se mezclan despues, sin
     # cache, asi que una subida nueva aparece en el listado al instante.
     first_page = not cursor and not query.cursor_string
@@ -329,7 +329,7 @@ async def search_beatmapset(
     try:
         sets = await fetcher.search_beatmapset(query, cursor, redis)
 
-        # 缓存搜索结果
+        # Cache search results
         await cache_service.cache_search_result(query_hash, cursor_hash, sets.model_dump())
         return await _mix_in_local(db, query, current_user, sets, first_page)
     except HTTPError as e:
@@ -338,21 +338,21 @@ async def search_beatmapset(
 
 @router.get(
     "/beatmapsets/lookup",
-    tags=["谱面集"],
-    responses={200: api_doc("谱面集详细信息", BeatmapsetModel, BeatmapsetModel.BEATMAPSET_TRANSFORMER_INCLUDES)},
-    name="查询谱面集 (通过谱面 ID)",
-    description=("通过谱面 ID 查询所属谱面集。"),
+    tags=["Beatmapsets"],
+    responses={200: api_doc("Beatmapset details", BeatmapsetModel, BeatmapsetModel.BEATMAPSET_TRANSFORMER_INCLUDES)},
+    name="Lookup Beatmapset by Beatmap ID",
+    description=("Lookup parent beatmapset by beatmap ID."),
 )
 @asset_proxy_response
 async def lookup_beatmapset(
     db: Database,
     request: Request,
-    beatmap_id: Annotated[int, Query(description="谱面 ID")],
+    beatmap_id: Annotated[int, Query(description="Beatmap ID")],
     fetcher: Fetcher,
     cache_service: BeatmapsetCacheService,
     current_user: User | None = Security(get_optional_user, scopes=["public"]),
 ):
-    # 先尝试从缓存获取
+    # Try getting from cache first
     cached_resp = await cache_service.get_beatmap_lookup_from_cache(beatmap_id)
     if cached_resp:
         return cached_resp
@@ -366,7 +366,7 @@ async def lookup_beatmapset(
             includes=_beatmapset_includes_for_user(current_user),
         )
 
-        # 缓存结果
+        # Cache result
         await cache_service.cache_beatmap_lookup(beatmap_id, resp)
         return resp
     except HTTPError as exc:
@@ -375,21 +375,21 @@ async def lookup_beatmapset(
 
 @router.get(
     "/beatmapsets/{beatmapset_id}",
-    tags=["谱面集"],
-    responses={200: api_doc("谱面集详细信息", BeatmapsetModel, BeatmapsetModel.BEATMAPSET_TRANSFORMER_INCLUDES)},
-    name="获取谱面集详情",
-    description="获取单个谱面集详情。",
+    tags=["Beatmapsets"],
+    responses={200: api_doc("Beatmapset details", BeatmapsetModel, BeatmapsetModel.BEATMAPSET_TRANSFORMER_INCLUDES)},
+    name="Get Beatmapset Details",
+    description="Get details for a single beatmapset.",
 )
 @asset_proxy_response
 async def get_beatmapset(
     db: Database,
     request: Request,
-    beatmapset_id: Annotated[int, Path(..., description="谱面集 ID")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
     fetcher: Fetcher,
     cache_service: BeatmapsetCacheService,
     current_user: User | None = Security(get_optional_user, scopes=["public"]),
 ):
-    # 先尝试从缓存获取
+    # Try getting from cache first
     cached_resp = await cache_service.get_beatmapset_from_cache(beatmapset_id)
     if cached_resp:
         return cached_resp
@@ -404,7 +404,7 @@ async def get_beatmapset(
             user=current_user,
         )
 
-        # 缓存结果
+        # Cache result
         await cache_service.cache_beatmapset(resp)
         return resp
     except HTTPError as exc:
@@ -704,12 +704,12 @@ def ensure_beatmaps_registered_in_background(beatmapset_id: int, fetcher: Fetche
     task.add_done_callback(_bg_register_tasks.discard)
 
 
-@router.get("/beatmapsets/{beatmapset_id}/download", tags=["谱面集"])
+@router.get("/beatmapsets/{beatmapset_id}/download", tags=["Beatmapsets"])
 async def download_beatmapset(
     storage: StorageService,
     redis: Redis,
     client_ip: IPAddress,
-    beatmapset_id: Annotated[int, Path(..., description="谱面集 ID")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
     download_service: DownloadService,
     fetcher: Fetcher,
     no_video: Annotated[bool, Query(alias="noVideo")] = True,
@@ -1010,17 +1010,17 @@ async def download_beatmapset(
 
 @router.post(
     "/beatmapsets/{beatmapset_id}/favourites",
-    tags=["谱面集"],
-    name="收藏或取消收藏谱面集",
-    description="\n收藏或取消收藏指定谱面集。",
+    tags=["Beatmapsets"],
+    name="Favourite or Unfavourite Beatmapset",
+    description="\nFavourite or unfavourite specified beatmapset.",
 )
 async def favourite_beatmapset(
     db: Database,
     cache_service: UserCacheService,
-    beatmapset_id: Annotated[int, Path(..., description="谱面集 ID")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
     action: Annotated[
         Literal["favourite", "unfavourite"],
-        Form(description="操作类型：favourite 收藏 / unfavourite 取消收藏"),
+        Form(description="Action type: 'favourite' to favourite / 'unfavourite' to unfavourite"),
     ],
     current_user: ClientUser,
 ):

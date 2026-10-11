@@ -122,7 +122,7 @@ async def _clear_cover(
     await session.commit()
 
 
-@router.post("/cover/upload", name="上传头图", tags=["用户", "g0v0 API"])
+@router.post("/cover/upload", name="Upload Cover", tags=["Users", "g0v0 API"])
 async def upload_cover(
     session: Database,
     content: Annotated[bytes, File(...)],
@@ -131,22 +131,22 @@ async def upload_cover(
     cache_service: UserCacheService,
     is_nsfw: Annotated[bool, Form()] = False,
 ):
-    """上传用户头图
+    """Upload user profile cover
 
-    接收图片数据，验证图片格式和大小后存储到存储服务，并更新用户的头图 URL
+    Accepts image data, validates format and size, stores it to storage service, and updates the user's cover URL.
 
-    限制条件:
-    - 支持的图片格式: PNG、JPEG、GIF
-    - 最大文件大小: 10MB
-    - 最大图片尺寸: 3000x2000 像素
+    Constraints:
+    - Supported formats: PNG, JPEG, GIF
+    - Max file size: 10MB
+    - Max image dimensions: 3000x2000 pixels
 
-    返回:
-    - 头图 URL 和文件哈希值
+    Returns:
+    - Cover URL and file hash
     """
     return await _replace_cover(session, current_user, content, is_nsfw, storage, cache_service)
 
 
-@router.delete("/cover", name="删除头图", tags=["用户", "g0v0 API"], status_code=204)
+@router.delete("/cover", name="Delete Cover", tags=["Users", "g0v0 API"], status_code=204)
 async def delete_cover(
     session: Database,
     current_user: ClientUser,
@@ -161,7 +161,7 @@ async def delete_cover(
 # Mismo trato que el avatar: secreto compartido en el header y el id del usuario
 # explicito, porque el sitio no puede pedirse un token del usuario. Ver el
 # comentario largo en avatar.py.
-@router.post("/web/cover/upload", name="上传头图 (torii-web)", tags=["用户", "g0v0 API"])
+@router.post("/web/cover/upload", name="Upload Cover (torii-web)", tags=["Users", "g0v0 API"])
 async def upload_cover_from_web(
     session: Database,
     storage: StorageService,
@@ -176,7 +176,7 @@ async def upload_cover_from_web(
     return await _replace_cover(session, user, content, is_nsfw, storage, cache_service)
 
 
-@router.delete("/web/cover", name="删除头图 (torii-web)", tags=["用户", "g0v0 API"], status_code=204)
+@router.delete("/web/cover", name="Delete Cover (torii-web)", tags=["Users", "g0v0 API"], status_code=204)
 async def delete_cover_from_web(
     session: Database,
     storage: StorageService,

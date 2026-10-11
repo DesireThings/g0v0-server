@@ -82,12 +82,12 @@ class UserStatisticsModel(DatabaseModel[UserStatisticsDict]):
     @field_validator("mode", mode="before")
     @classmethod
     def validate_mode(cls, v):
-        """将字符串转换为 GameMode 枚举"""
+        """Convert string to GameMode enum"""
         if isinstance(v, str):
             try:
                 return GameMode(v)
             except ValueError:
-                # 如果转换失败，返回默认值
+                # If conversion fails, return default value
                 return GameMode.OSU
         return v
 

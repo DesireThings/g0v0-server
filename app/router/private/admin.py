@@ -539,8 +539,8 @@ class GlobalAnnouncementResp(BaseModel):
 
 @router.get(
     "/admin/sessions",
-    name="获取当前用户的登录会话列表",
-    tags=["用户会话", "g0v0 API", "管理"],
+    name="Get Current User Login Sessions",
+    tags=["User Sessions", "g0v0 API", "Admin"],
     response_model=SessionsResp,
 )
 async def get_sessions(
@@ -575,8 +575,8 @@ async def get_sessions(
 
 @router.delete(
     "/admin/sessions/{session_id}",
-    name="注销指定的登录会话",
-    tags=["用户会话", "g0v0 API", "管理"],
+    name="Revoke Login Session",
+    tags=["User Sessions", "g0v0 API", "Admin"],
     status_code=204,
 )
 async def delete_session(
@@ -610,8 +610,8 @@ class TrustedDevicesResp(BaseModel):
 
 @router.get(
     "/admin/trusted-devices",
-    name="获取当前用户的受信任设备列表",
-    tags=["用户会话", "g0v0 API", "管理"],
+    name="Get Current User Trusted Devices",
+    tags=["User Sessions", "g0v0 API", "Admin"],
     response_model=TrustedDevicesResp,
 )
 async def get_trusted_devices(
@@ -649,8 +649,8 @@ async def get_trusted_devices(
 
 @router.delete(
     "/admin/trusted-devices/{device_id}",
-    name="移除受信任设备",
-    tags=["用户会话", "g0v0 API", "管理"],
+    name="Remove Trusted Device",
+    tags=["User Sessions", "g0v0 API", "Admin"],
     status_code=204,
 )
 async def delete_trusted_device(
@@ -686,8 +686,8 @@ async def delete_trusted_device(
 
 @router.get(
     "/admin/stats",
-    name="获取管理员统计数据",
-    tags=["管理", "g0v0 API"],
+    name="Get Admin Statistics",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminStatsResp,
 )
 async def get_admin_stats(
@@ -771,7 +771,7 @@ async def get_admin_stats(
 @router.get(
     "/admin/login-logs",
     name="Get login history logs",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
     response_model=AdminLoginLogListResp,
 )
 async def get_admin_login_logs(
@@ -877,7 +877,7 @@ async def get_admin_login_logs(
 @router.get(
     "/admin/client-hashes/unknown",
     name="Get unknown client hashes",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
     response_model=UnknownClientHashListResp,
 )
 async def get_unknown_client_hashes(
@@ -928,7 +928,7 @@ async def get_unknown_client_hashes(
 @router.post(
     "/admin/client-hashes/assign",
     name="Assign unknown client hash",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
 )
 async def assign_unknown_client_hash(
     req: AssignClientHashReq,
@@ -1195,8 +1195,8 @@ async def send_global_announcement(
 
 @router.get(
     "/admin/users",
-    name="获取所有用户列表",
-    tags=["管理", "g0v0 API"],
+    name="Get All Users",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_all_users(
     session: Database,
@@ -1227,8 +1227,8 @@ async def get_all_users(
 
 @router.get(
     "/admin/users/{user_id}",
-    name="获取指定用户信息",
-    tags=["管理", "g0v0 API"],
+    name="Get User Info",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_user(
     session: Database,
@@ -1247,8 +1247,8 @@ async def get_user(
 
 @router.patch(
     "/admin/users/{user_id}",
-    name="更新用户信息",
-    tags=["管理", "g0v0 API"],
+    name="Update User Info",
+    tags=["Admin", "g0v0 API"],
 )
 async def update_user(
     session: Database,
@@ -1443,8 +1443,8 @@ async def update_user(
 
 @router.post(
     "/admin/users/{user_id}/ban",
-    name="封禁用户",
-    tags=["管理", "g0v0 API"],
+    name="Restrict User",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def ban_user(
@@ -1512,8 +1512,8 @@ async def ban_user(
 
 @router.post(
     "/admin/users/{user_id}/unban",
-    name="解封用户",
-    tags=["管理", "g0v0 API"],
+    name="Unrestrict User",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def unban_user(
@@ -1609,8 +1609,8 @@ class GrantSupporterResp(BaseModel):
 
 @router.post(
     "/admin/users/{user_id}/grant-supporter",
-    name="手动授予用户 Supporter 时长",
-    tags=["管理", "g0v0 API"],
+    name="Manually Grant User Supporter Duration",
+    tags=["Admin", "g0v0 API"],
     response_model=GrantSupporterResp,
 )
 async def grant_supporter(
@@ -1688,8 +1688,8 @@ async def grant_supporter(
 
 @router.get(
     "/admin/beatmaps/blacklist",
-    name="获取黑名单谱面列表",
-    tags=["管理", "g0v0 API"],
+    name="Get Blacklisted Beatmaps",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_blacklisted_beatmaps(
     session: Database,
@@ -1786,8 +1786,8 @@ class BeatmapBlacklistRequest(BaseModel):
 
 @router.post(
     "/admin/beatmaps/blacklist",
-    name="添加谱面到黑名单",
-    tags=["管理", "g0v0 API"],
+    name="Add Beatmap to Blacklist",
+    tags=["Admin", "g0v0 API"],
     status_code=201,
 )
 async def add_blacklisted_beatmap(
@@ -1909,8 +1909,8 @@ async def remove_blacklisted_single_beatmap(
 
 @router.delete(
     "/admin/beatmaps/blacklist/{beatmapset_id}",
-    name="从黑名单移除谱面",
-    tags=["管理", "g0v0 API"],
+    name="Remove Beatmap from Blacklist",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def remove_blacklisted_beatmap(
@@ -1952,7 +1952,7 @@ async def remove_blacklisted_beatmap(
 @router.post(
     "/admin/beatmaps/blacklist/reverify",
     name="Re-verify banned beatmaps",
-    tags=["管理", "g0v0 API"],
+    tags=["Admin", "g0v0 API"],
 )
 async def reverify_blacklisted_beatmaps(
     session: Database,
@@ -1974,8 +1974,8 @@ async def reverify_blacklisted_beatmaps(
 
 @router.get(
     "/admin/beatmaps",
-    name="获取所有谱面",
-    tags=["管理", "g0v0 API"],
+    name="Get All Beatmaps",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_beatmaps(
     session: Database,
@@ -2074,8 +2074,8 @@ async def get_beatmaps(
 
 @router.get(
     "/admin/beatmaps/{beatmap_id}",
-    name="获取谱面详情",
-    tags=["管理", "g0v0 API"],
+    name="Get Beatmap Details",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_beatmap_details(
     session: Database,
@@ -2127,8 +2127,8 @@ class RankStatusUpdate(BaseModel):
 
 @router.post(
     "/admin/beatmaps/{beatmapset_id}/rank",
-    name="更新谱面状态",
-    tags=["管理", "g0v0 API"],
+    name="Update Beatmap Status",
+    tags=["Admin", "g0v0 API"],
 )
 async def update_beatmap_rank_status(
     session: Database,
@@ -2159,8 +2159,8 @@ async def update_beatmap_rank_status(
 
 @router.post(
     "/admin/beatmaps/{beatmapset_id}/ban",
-    name="封禁谱面",
-    tags=["管理", "g0v0 API"],
+    name="Ban Beatmap",
+    tags=["Admin", "g0v0 API"],
 )
 async def ban_beatmapset(
     session: Database,
@@ -2222,8 +2222,8 @@ class WipeRequest(BaseModel):
 
 @router.post(
     "/admin/users/{user_id}/wipe",
-    name="清除用户数据",
-    tags=["管理", "g0v0 API"],
+    name="Wipe User Data",
+    tags=["Admin", "g0v0 API"],
 )
 async def wipe_user_stats(
     session: Database,
@@ -2281,8 +2281,8 @@ async def wipe_user_stats(
 
 @router.get(
     "/admin/user-badges",
-    name="获取所有徽章",
-    tags=["管理", "g0v0 API"],
+    name="Get All Badges",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_user_badges(
     session: Database,
@@ -2317,8 +2317,8 @@ async def get_user_badges(
 
 @router.post(
     "/admin/user-badges",
-    name="创建徽章",
-    tags=["管理", "g0v0 API"],
+    name="Create Badge",
+    tags=["Admin", "g0v0 API"],
     status_code=201,
 )
 async def create_user_badge(
@@ -2351,8 +2351,8 @@ async def create_user_badge(
 
 @router.patch(
     "/admin/user-badges/{badge_id}",
-    name="更新徽章",
-    tags=["管理", "g0v0 API"],
+    name="Update Badge",
+    tags=["Admin", "g0v0 API"],
 )
 async def update_user_badge(
     session: Database,
@@ -2390,8 +2390,8 @@ async def update_user_badge(
 
 @router.delete(
     "/admin/user-badges/{badge_id}",
-    name="删除徽章",
-    tags=["管理", "g0v0 API"],
+    name="Delete Badge",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def delete_user_badge(
@@ -2414,8 +2414,8 @@ async def delete_user_badge(
 
 @router.get(
     "/admin/teams",
-    name="获取所有战队",
-    tags=["管理", "g0v0 API"],
+    name="Get All Teams",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_all_teams(
     session: Database,
@@ -2430,8 +2430,8 @@ async def get_all_teams(
 
 @router.patch(
     "/admin/teams/{team_id}",
-    name="更新战队",
-    tags=["管理", "g0v0 API"],
+    name="Update Team",
+    tags=["Admin", "g0v0 API"],
 )
 async def update_team_admin(
     session: Database,
@@ -2546,8 +2546,8 @@ async def update_team_admin(
 
 @router.delete(
     "/admin/teams/{team_id}",
-    name="删除战队",
-    tags=["管理", "g0v0 API"],
+    name="Delete Team",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def delete_team_admin(
@@ -2594,8 +2594,8 @@ class DailyChallengeStatsResponse(BaseModel):
 
 @router.get(
     "/admin/daily-challenge/stats/{user_id}",
-    name="获取用户每日挑战统计",
-    tags=["管理", "g0v0 API"],
+    name="Get User Daily Challenge Stats",
+    tags=["Admin", "g0v0 API"],
     response_model=DailyChallengeStatsResponse,
 )
 async def get_daily_challenge_stats(
@@ -2633,8 +2633,8 @@ class DailyChallengeListResponse(BaseModel):
 
 @router.get(
     "/admin/daily-challenges",
-    name="获取每日挑战列表",
-    tags=["管理", "g0v0 API"],
+    name="Get Daily Challenges",
+    tags=["Admin", "g0v0 API"],
     response_model=DailyChallengeListResponse,
 )
 async def list_daily_challenges(
@@ -2716,8 +2716,8 @@ async def list_daily_challenges(
 
 @router.get(
     "/admin/daily-challenge/{date}",
-    name="获取每日挑战",
-    tags=["管理", "g0v0 API"],
+    name="Get Daily Challenge",
+    tags=["Admin", "g0v0 API"],
     response_model=DailyChallengeResponse | None,
 )
 async def get_daily_challenge(
@@ -2760,8 +2760,8 @@ async def get_daily_challenge(
 
 @router.post(
     "/admin/daily-challenge/trigger",
-    name="手动触发每日挑战",
-    tags=["管理", "g0v0 API"],
+    name="Manually Trigger Daily Challenge",
+    tags=["Admin", "g0v0 API"],
 )
 async def trigger_daily_challenge(
     session: Database,
@@ -2778,8 +2778,8 @@ async def trigger_daily_challenge(
 
 @router.post(
     "/admin/daily-challenge",
-    name="创建每日挑战",
-    tags=["管理", "g0v0 API"],
+    name="Create Daily Challenge",
+    tags=["Admin", "g0v0 API"],
     status_code=201,
     response_model=DailyChallengeResponse,
 )
@@ -2916,8 +2916,8 @@ async def create_daily_challenge(
 
 @router.patch(
     "/admin/daily-challenge/{date}",
-    name="更新每日挑战",
-    tags=["管理", "g0v0 API"],
+    name="Update Daily Challenge",
+    tags=["Admin", "g0v0 API"],
     response_model=DailyChallengeResponse,
 )
 async def update_daily_challenge(
@@ -3115,8 +3115,8 @@ async def _purge_room_and_dependents(session: Database, room_id: int) -> None:
 
 @router.delete(
     "/admin/daily-challenge/{date}",
-    name="删除每日挑战",
-    tags=["管理", "g0v0 API"],
+    name="Delete Daily Challenge",
+    tags=["Admin", "g0v0 API"],
     status_code=204,
 )
 async def delete_daily_challenge(
@@ -3194,8 +3194,8 @@ class RandomDailyChallengeReq(BaseModel):
 
 @router.post(
     "/admin/daily-challenge/random",
-    name="随机抽取每日挑战谱面",
-    tags=["管理", "g0v0 API"],
+    name="Randomly Pick Daily Challenge Beatmap",
+    tags=["Admin", "g0v0 API"],
 )
 async def pick_random_daily_challenge_beatmap(
     session: Database,
@@ -3387,8 +3387,8 @@ async def pick_random_daily_challenge_beatmap(
 
 @router.post(
     "/admin/recalculate/user/{user_id}",
-    name="排队用户重新计算",
-    tags=["管理", "g0v0 API"],
+    name="Queue User Recalculation",
+    tags=["Admin", "g0v0 API"],
 )
 async def enqueue_user_pp_recalc(
     session: Database,
@@ -3417,8 +3417,8 @@ async def enqueue_user_pp_recalc(
 
 @router.get(
     "/admin/recalculate/status",
-    name="重新计算队列状态",
-    tags=["管理", "g0v0 API"],
+    name="Recalculation Queue Status",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_recalculation_status(
     session: Database,
@@ -3458,8 +3458,8 @@ class _MaintenanceEnableBody(BaseModel):
 
 @router.get(
     "/admin/maintenance",
-    name="维护模式状态",
-    tags=["管理", "g0v0 API"],
+    name="Maintenance Mode Status",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_maintenance_state_endpoint(
     session: Database,
@@ -3474,8 +3474,8 @@ async def get_maintenance_state_endpoint(
 
 @router.post(
     "/admin/maintenance",
-    name="启用维护模式",
-    tags=["管理", "g0v0 API"],
+    name="Enable Maintenance Mode",
+    tags=["Admin", "g0v0 API"],
 )
 async def enable_maintenance_endpoint(
     session: Database,
@@ -3502,8 +3502,8 @@ async def enable_maintenance_endpoint(
 
 @router.delete(
     "/admin/maintenance",
-    name="关闭维护模式",
-    tags=["管理", "g0v0 API"],
+    name="Disable Maintenance Mode",
+    tags=["Admin", "g0v0 API"],
 )
 async def disable_maintenance_endpoint(
     session: Database,
@@ -3532,8 +3532,8 @@ async def disable_maintenance_endpoint(
 
 @router.post(
     "/admin/manual-submit/preview",
-    name="手动提交成绩预览",
-    tags=["管理", "g0v0 API"],
+    name="Manual Score Submission Preview",
+    tags=["Admin", "g0v0 API"],
 )
 async def manual_submit_preview_endpoint(
     session: Database,
@@ -3551,8 +3551,8 @@ async def manual_submit_preview_endpoint(
 
 @router.post(
     "/admin/manual-submit/commit",
-    name="手动提交成绩",
-    tags=["管理", "g0v0 API"],
+    name="Manual Score Submission",
+    tags=["Admin", "g0v0 API"],
 )
 async def manual_submit_commit_endpoint(
     session: Database,
@@ -3594,8 +3594,8 @@ async def manual_submit_commit_endpoint(
 
 @router.get(
     "/admin/mods-catalog",
-    name="管理员模组目录",
-    tags=["管理", "g0v0 API"],
+    name="Admin Mod Catalog",
+    tags=["Admin", "g0v0 API"],
 )
 async def get_mods_catalog(
     session: Database,
@@ -3674,8 +3674,8 @@ def _ucr_to_admin_resp(
 
 @router.get(
     "/admin/username-change-requests",
-    name="获取用户名修改申请列表",
-    tags=["管理", "g0v0 API"],
+    name="Get Username Change Request List",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminUsernameChangeRequestListResp,
 )
 async def list_username_change_requests(
@@ -3736,8 +3736,8 @@ async def list_username_change_requests(
 
 @router.post(
     "/admin/username-change-requests/{request_id}/approve",
-    name="通过用户名修改申请",
-    tags=["管理", "g0v0 API"],
+    name="Approve Username Change Request",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminUsernameChangeRequestResp,
 )
 async def approve_username_change_request(
@@ -3844,8 +3844,8 @@ async def approve_username_change_request(
 
 @router.post(
     "/admin/username-change-requests/{request_id}/reject",
-    name="拒绝用户名修改申请",
-    tags=["管理", "g0v0 API"],
+    name="Reject Username Change Request",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminUsernameChangeRequestResp,
 )
 async def reject_username_change_request(
@@ -3926,8 +3926,8 @@ class RemovePreviousUsernamesReq(BaseModel):
 
 @router.get(
     "/admin/users/{user_id}/previous-usernames",
-    name="获取用户曾用名",
-    tags=["管理", "g0v0 API"],
+    name="Get Previous Usernames",
+    tags=["Admin", "g0v0 API"],
     response_model=PreviousUsernamesResp,
 )
 async def get_previous_usernames(
@@ -3951,8 +3951,8 @@ async def get_previous_usernames(
 
 @router.post(
     "/admin/users/{user_id}/previous-usernames/remove",
-    name="移除用户曾用名",
-    tags=["管理", "g0v0 API"],
+    name="Remove Previous Username",
+    tags=["Admin", "g0v0 API"],
     response_model=PreviousUsernamesResp,
 )
 async def remove_previous_usernames(
@@ -3992,8 +3992,8 @@ async def remove_previous_usernames(
 
 @router.delete(
     "/admin/users/{user_id}/previous-usernames",
-    name="清空用户曾用名",
-    tags=["管理", "g0v0 API"],
+    name="Clear Previous Usernames",
+    tags=["Admin", "g0v0 API"],
     response_model=PreviousUsernamesResp,
 )
 async def clear_previous_usernames(
@@ -4059,8 +4059,8 @@ def _pmr_to_admin_resp(review: ProfileMediaReview, username: str | None) -> Admi
 
 @router.get(
     "/admin/profile-media-reviews",
-    name="获取待审核的 NSFW 资料媒体列表",
-    tags=["管理", "g0v0 API"],
+    name="Get Pending NSFW Profile Media List",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminProfileMediaReviewListResp,
 )
 async def list_profile_media_reviews(
@@ -4111,8 +4111,8 @@ async def list_profile_media_reviews(
 
 @router.post(
     "/admin/profile-media-reviews/{review_id}/revoke",
-    name="撤下 NSFW 资料媒体",
-    tags=["管理", "g0v0 API"],
+    name="Takedown NSFW Profile Media",
+    tags=["Admin", "g0v0 API"],
     response_model=AdminProfileMediaReviewResp,
 )
 async def revoke_profile_media(

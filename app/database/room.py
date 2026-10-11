@@ -92,7 +92,7 @@ class RoomModel(DatabaseModel[RoomDict]):
     @field_validator("channel_id", mode="before")
     @classmethod
     def validate_channel_id(cls, v):
-        """将 None 转换为 0"""
+        """Convert None to 0"""
         if v is None:
             return 0
         return v

@@ -12,21 +12,21 @@ from sqlmodel import select
 
 
 class CheckResponse(BaseModel):
-    is_followed: bool = Field(..., description="对方是否关注了当前用户")
-    is_following: bool = Field(..., description="当前用户是否关注了对方")
-    mutual: bool = Field(..., description="当前用户与对方是否互相关注")
+    is_followed: bool = Field(..., description="Whether the target user is following the current user")
+    is_following: bool = Field(..., description="Whether the current user is following the target user")
+    mutual: bool = Field(..., description="Whether the current user and target user mutually follow each other")
 
 
 @router.get(
     "/relationship/check/{user_id}",
-    name="检查关系状态",
-    description="检查当前用户与指定用户的关系状态",
+    name="Check Relationship Status",
+    description="Check relationship status between current user and specified user",
     response_model=CheckResponse,
-    tags=["用户关系", "g0v0 API"],
+    tags=["User Relationships", "g0v0 API"],
 )
 async def check_user_relationship(
     db: Database,
-    user_id: Annotated[int, Path(..., description="目标用户的 ID")],
+    user_id: Annotated[int, Path(..., description="Target user ID")],
     current_user: ClientUser,
 ):
     if user_id == current_user.id:

@@ -1,6 +1,6 @@
 """
-Beatmapset缓存服务
-用于缓存beatmapset数据，减少数据库查询频率
+Beatmapset cache service.
+Used to cache beatmapset data and reduce database query frequency.
 """
 
 import hashlib
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def generate_hash(data) -> str:
-    """生成数据的MD5哈希值"""
+    """Generate MD5 hash value of data."""
     content = data if isinstance(data, str) else safe_json_dumps(data)
     return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
 
@@ -58,7 +58,7 @@ def _has_missing_beatmap_checksums(payload) -> bool:
 
 
 class BeatmapsetCacheService:
-    """Beatmapset缓存服务"""
+    """Beatmapset cache service."""
 
     def __init__(self, redis: Redis):
         self.redis = redis
@@ -73,15 +73,15 @@ class BeatmapsetCacheService:
         return f"beatmapset:{self._status_cache_scope()}:{beatmapset_id}"
 
     def _get_beatmap_lookup_cache_key(self, beatmap_id: int) -> str:
-        """生成beatmap lookup缓存键"""
+        """Generate beatmap lookup cache key."""
         return f"beatmap_lookup:{self._status_cache_scope()}:{beatmap_id}:beatmapset"
 
     def _get_search_cache_key(self, query_hash: str, cursor_hash: str) -> str:
-        """生成搜索结果缓存键"""
+        """Generate search result cache key."""
         return f"beatmapset_search:{query_hash}:{cursor_hash}"
 
     async def get_beatmapset_from_cache(self, beatmapset_id: int) -> BeatmapsetDict | None:
-        """从缓存获取beatmapset信息"""
+        """Get beatmapset information from cache."""
         try:
             cache_key = self._get_beatmapset_cache_key(beatmapset_id)
             cached_data = await self.redis.get(cache_key)
@@ -113,7 +113,7 @@ class BeatmapsetCacheService:
         beatmapset_resp: BeatmapsetDict,
         expire_seconds: int | None = None,
     ):
-        """缓存beatmapset信息"""
+        """Cache beatmapset information."""
         try:
             if expire_seconds is None:
                 expire_seconds = self._default_ttl
@@ -125,7 +125,7 @@ class BeatmapsetCacheService:
             logger.error(f"Error caching beatmapset: {e}")
 
     async def get_beatmap_lookup_from_cache(self, beatmap_id: int) -> BeatmapsetDict | None:
-        """从缓存获取通过beatmap ID查找的beatmapset信息"""
+        """Get beatmapset information looked up by beatmap ID from cache."""
         try:
             cache_key = self._get_beatmap_lookup_cache_key(beatmap_id)
             cached_data = await self.redis.get(cache_key)
@@ -153,7 +153,7 @@ class BeatmapsetCacheService:
         beatmapset_resp: BeatmapsetDict,
         expire_seconds: int | None = None,
     ):
-        """缓存通过beatmap ID查找的beatmapset信息"""
+        """Cache beatmapset information looked up by beatmap ID."""
         try:
             if expire_seconds is None:
                 expire_seconds = self._default_ttl
@@ -165,7 +165,7 @@ class BeatmapsetCacheService:
             logger.error(f"Error caching beatmap lookup: {e}")
 
     async def get_search_from_cache(self, query_hash: str, cursor_hash: str) -> dict | None:
-        """从缓存获取搜索结果"""
+        """Get search results from cache."""
         try:
             cache_key = self._get_search_cache_key(query_hash, cursor_hash)
             cached_data = await self.redis.get(cache_key)
@@ -184,10 +184,10 @@ class BeatmapsetCacheService:
         search_result: dict,
         expire_seconds: int | None = None,
     ):
-        """缓存搜索结果"""
+        """Cache search results."""
         try:
             if expire_seconds is None:
-                expire_seconds = min(self._default_ttl, 300)  # 搜索结果缓存时间较短，最多5分钟
+                expire_seconds = min(self._default_ttl, 300)  # Short cache time for search results, at most 5 minutes
             cache_key = self._get_search_cache_key(query_hash, cursor_hash)
             cached_data = safe_json_dumps(search_result)
             await self.redis.setex(cache_key, expire_seconds, cached_data)  # type: ignore
@@ -196,7 +196,7 @@ class BeatmapsetCacheService:
             logger.error(f"Error caching search result: {e}")
 
     async def invalidate_beatmapset_cache(self, beatmapset_id: int):
-        """使beatmapset缓存失效"""
+        """Invalidate beatmapset cache."""
         try:
             cache_key = self._get_beatmapset_cache_key(beatmapset_id)
             await self.redis.delete(cache_key)
@@ -205,7 +205,7 @@ class BeatmapsetCacheService:
             logger.error(f"Error invalidating beatmapset cache: {e}")
 
     async def invalidate_beatmap_lookup_cache(self, beatmap_id: int):
-        """使beatmap lookup缓存失效"""
+        """Invalidate beatmap lookup cache."""
         try:
             cache_key = self._get_beatmap_lookup_cache_key(beatmap_id)
             await self.redis.delete(cache_key)
@@ -214,7 +214,7 @@ class BeatmapsetCacheService:
             logger.error(f"Error invalidating beatmap lookup cache: {e}")
 
     async def get_cache_stats(self) -> dict:
-        """获取缓存统计信息"""
+        """Get cache statistics."""
         try:
             beatmapset_keys = await self.redis.keys("beatmapset:*")
             lookup_keys = await self.redis.keys("beatmap_lookup:*")
@@ -231,12 +231,12 @@ class BeatmapsetCacheService:
             return {"error": str(e)}
 
 
-# 全局缓存服务实例
+# Global cache service instance
 _cache_service: BeatmapsetCacheService | None = None
 
 
 def get_beatmapset_cache_service(redis: Redis) -> BeatmapsetCacheService:
-    """获取beatmapset缓存服务实例"""
+    """Get beatmapset cache service instance."""
     global _cache_service
     if _cache_service is None:
         _cache_service = BeatmapsetCacheService(redis)

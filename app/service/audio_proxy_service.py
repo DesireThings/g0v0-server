@@ -1,6 +1,6 @@
 """
-音频代理服务
-提供从osu!官方获取beatmapset音频预览并缓存的功能
+Audio proxy service.
+Provides functionality to fetch beatmapset audio previews from official osu! and cache them.
 """
 
 from app.log import logger
@@ -11,7 +11,7 @@ import redis.asyncio as redis
 
 
 class AudioProxyService:
-    """音频代理服务"""
+    """Audio proxy service."""
 
     def __init__(self, redis_binary_client: redis.Redis, redis_text_client: redis.Redis):
         self.redis_binary = redis_binary_client
@@ -20,30 +20,30 @@ class AudioProxyService:
         self._cache_ttl = 7 * 24 * 60 * 60
 
     async def close(self):
-        """关闭HTTP客户端"""
+        """Close HTTP client."""
         await self.http_client.aclose()
 
     def _get_beatmapset_cache_key(self, beatmapset_id: int) -> str:
-        """生成beatmapset音频缓存键"""
+        """Generate beatmapset audio cache key."""
         return f"beatmapset_audio:{beatmapset_id}"
 
     def _get_beatmapset_metadata_key(self, beatmapset_id: int) -> str:
-        """生成beatmapset音频元数据缓存键"""
+        """Generate beatmapset audio metadata cache key."""
         return f"beatmapset_audio_meta:{beatmapset_id}"
 
     async def get_beatmapset_audio_from_cache(self, beatmapset_id: int) -> tuple[bytes, str] | None:
-        """从缓存获取beatmapset音频数据和内容类型"""
+        """Get beatmapset audio data and content type from cache."""
         try:
             cache_key = self._get_beatmapset_cache_key(beatmapset_id)
             metadata_key = self._get_beatmapset_metadata_key(beatmapset_id)
 
-            # 获取音频数据（二进制）和元数据（文本）
+            # Get audio data (binary) and metadata (text)
             audio_data = await self.redis_binary.get(cache_key)
             metadata = await self.redis_text.get(metadata_key)
 
             if audio_data and metadata:
                 logger.debug(f"Beatmapset audio cache hit for ID: {beatmapset_id}")
-                # audio_data 已经是 bytes 类型，metadata 是 str 类型
+                # audio_data is already bytes type, metadata is str type
                 return audio_data, metadata
             return None
         except (redis.RedisError, redis.ConnectionError) as e:
@@ -51,12 +51,12 @@ class AudioProxyService:
             return None
 
     async def cache_beatmapset_audio(self, beatmapset_id: int, audio_data: bytes, content_type: str):
-        """缓存beatmapset音频数据"""
+        """Cache beatmapset audio data."""
         try:
             cache_key = self._get_beatmapset_cache_key(beatmapset_id)
             metadata_key = self._get_beatmapset_metadata_key(beatmapset_id)
 
-            # 缓存音频数据（二进制）和元数据（文本）
+            # Cache audio data (binary) and metadata (text)
             await self.redis_binary.setex(cache_key, self._cache_ttl, audio_data)
             await self.redis_text.setex(metadata_key, self._cache_ttl, content_type)
 
@@ -65,20 +65,20 @@ class AudioProxyService:
             logger.error(f"Error caching beatmapset audio: {e}")
 
     async def fetch_beatmapset_audio(self, beatmapset_id: int) -> tuple[bytes, str]:
-        """从osu!官方获取beatmapset音频预览"""
+        """Fetch beatmapset audio preview from official osu!."""
         try:
-            # 构建 osu! 官方预览音频 URL
+            # Construct official osu! audio preview URL
             preview_url = f"https://b.ppy.sh/preview/{beatmapset_id}.mp3"
             logger.info(f"Fetching beatmapset audio from: {preview_url}")
 
             response = await self.http_client.get(preview_url)
             response.raise_for_status()
 
-            # osu!预览音频通常为mp3格式
+            # osu! audio previews are typically in mp3 format
             content_type = response.headers.get("content-type", "audio/mpeg")
             audio_data = response.content
 
-            # 检查文件大小限制（10MB，预览音频通常不会太大）
+            # Check file size limit (10MB, preview audio is usually not very large)
             max_size = 10 * 1024 * 1024  # 10MB
             if len(audio_data) > max_size:
                 raise HTTPException(
@@ -107,22 +107,22 @@ class AudioProxyService:
             raise HTTPException(status_code=500, detail="Internal server error while fetching audio") from e
 
     async def get_beatmapset_audio(self, beatmapset_id: int) -> tuple[bytes, str]:
-        """根据 beatmapset_id 获取音频预览"""
-        # 先尝试从缓存获取
+        """Get audio preview by beatmapset_id."""
+        # Try to get from cache first
         cached_result = await self.get_beatmapset_audio_from_cache(beatmapset_id)
         if cached_result:
             return cached_result
 
-        # 缓存未命中，从osu!官方获取
+        # Cache miss, fetch from official osu!
         audio_data, content_type = await self.fetch_beatmapset_audio(beatmapset_id)
 
-        # 缓存新获取的音频数据
+        # Cache newly fetched audio data
         await self.cache_beatmapset_audio(beatmapset_id, audio_data, content_type)
 
         return audio_data, content_type
 
 
 def get_audio_proxy_service(redis_binary_client: redis.Redis, redis_text_client: redis.Redis) -> AudioProxyService:
-    """获取音频代理服务实例"""
-    # 每次创建新实例，避免全局状态
+    """Get audio proxy service instance."""
+    # Create a new instance each time to avoid global state
     return AudioProxyService(redis_binary_client, redis_text_client)

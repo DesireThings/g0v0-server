@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     from app.router.status import start_collector as _start_status_collector
     await _start_status_collector()
     await start_cache_tasks()
-    init_beatmapset_update_service(fetcher)  # 初始化谱面集更新服务
+    init_beatmapset_update_service(fetcher)  # Initialize beatmapset update service
     redis_message_system.start()
     start_scheduler()
     await user_online_subscriber.start_subscribe()
@@ -145,48 +145,48 @@ async def lifespan(app: FastAPI):  # noqa: ARG001
     await redis_rate_limit_client.aclose()
 
 
-desc = f"""osu! API 模拟服务器，支持 osu! API v1, v2 和 osu!lazer 的绝大部分功能。
+desc = f"""osu! API emulation server, supporting the vast majority of osu! API v1, v2, and osu!lazer features.
 
-## 端点说明
+## Endpoints
 
-所有 v2 API 均以 `/api/v2/` 开头，所有 v1 API 均以 `/api/v1/` 开头（直接访问 `/api` 的 v1 API 会进行重定向）。
+All v2 APIs start with `/api/v2/`, all v1 APIs start with `/api/v1/` (accessing v1 APIs directly via `/api` will be redirected).
 
-所有 g0v0-server 提供的额外 API（g0v0-api） 均以 `/api/private/` 开头。
+All extra APIs provided by g0v0-server (g0v0-api) start with `/api/private/`.
 
-## 鉴权
+## Authentication
 
-v2 API 采用 OAuth 2.0 鉴权，支持以下鉴权方式：
+v2 API uses OAuth 2.0 authentication, supporting the following grant types:
 
-- `password` 密码鉴权，仅适用于 osu!lazer 客户端和前端等服务，需要提供用户的用户名和密码进行登录。
-- `authorization_code` 授权码鉴权，适用于第三方应用，需要提供用户的授权码进行登录。
-- `client_credentials` 客户端凭证鉴权，适用于服务端应用，需要提供客户端 ID 和客户端密钥进行登录。
+- `password`: Password authentication, only suitable for osu!lazer clients, frontend services, etc.; requires user username and password to log in.
+- `authorization_code`: Authorization code authentication, suitable for third-party applications; requires user authorization code to log in.
+- `client_credentials`: Client credentials authentication, suitable for server-side applications; requires client ID and client secret to log in.
 
-使用 `password` 鉴权的具有全部权限。`authorization_code` 具有指定 scope 的权限。`client_credentials` 只有 `public` 权限。各接口需要的权限请查看每个 Endpoint 的 Authorization。
+Logins using `password` have full permissions. `authorization_code` has permissions for specified scopes. `client_credentials` only has `public` permissions. For permissions required by each interface, see the Authorization section of each endpoint.
 
-v1 API 采用 API Key 鉴权，将 API Key 放入 Query `k` 中。
+v1 API uses API Key authentication; provide the API Key in the `k` query parameter.
 
 {
     '''
-## 速率限制
+## Rate Limiting
 
-所有 API 请求均受到速率限制，具体限制规则如下：
+All API requests are subject to rate limiting according to the following rules:
 
-- 每分钟最多可以发送 1200 个请求
-- 突发请求限制为每秒最多 200 个请求
+- A maximum of 1200 requests per minute
+- Burst limit is capped at 200 requests per second
 
-此外，下载回放 API (`/api/v1/get_replay`, `/api/v2/scores/{score_id}/download`) 的速率限制为每分钟最多 10 个请求。
+In addition, replay download APIs (`/api/v1/get_replay`, `/api/v2/scores/{score_id}/download`) are rate limited to a maximum of 10 requests per minute.
 '''
     if settings.enable_rate_limit
     else ""
 }
 
-## 参考
+## References
 
-- v2 API 文档：[osu-web 文档](https://osu.ppy.sh/docs/index.html)
-- v1 API 文档：[osu-api](https://github.com/ppy/osu-api/wiki)
+- v2 API documentation: [osu-web documentation](https://osu.ppy.sh/docs/index.html)
+- v1 API documentation: [osu-api](https://github.com/ppy/osu-api/wiki)
 """  # noqa: E501
 
-# 检查 New Relic 配置文件是否存在，如果存在则初始化 New Relic
+# Check if New Relic config file exists, initialize New Relic if present
 newrelic_config_path = Path("newrelic.ini")
 if newrelic_config_path.is_file():
     try:
@@ -240,7 +240,7 @@ app.include_router(lio_spectator_router)
 app.include_router(lio_router)
 app.include_router(beatmap_submission_router)
 
-# 会话验证中间件
+# Session verification middleware
 if settings.enable_session_verification:
     app.add_middleware(VerifySessionMiddleware)
 
@@ -248,7 +248,7 @@ if settings.enable_session_verification:
 # Fire-and-forget — never blocks the response.
 app.add_middleware(HwidTrackingMiddleware)
 
-# CORS 配置
+# CORS configuration
 origins = []
 for url in [*settings.cors_urls, settings.server_url]:
     origins.append(str(url))
@@ -273,7 +273,7 @@ async def get_user_avatar_root(
     user_id: int,
     session: Database,
 ):
-    """用户头像重定向端点 (根路径)"""
+    """User avatar redirect endpoint (root path)."""
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -300,13 +300,13 @@ async def get_user_avatar_root(
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """根端点"""
-    return {"message": "osu! API 模拟服务器正在运行"}
+    """Root endpoint."""
+    return {"message": "osu! API emulation server is running"}
 
 
 @app.get("/health", include_in_schema=False)
 async def health_check():
-    """健康检查端点"""
+    """Health check endpoint."""
     return {"status": "ok", "timestamp": utcnow().isoformat()}
 
 
@@ -362,6 +362,6 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
-        log_config=None,  # 禁用uvicorn默认日志配置
-        access_log=True,  # 启用访问日志
+        log_config=None,  # Disable uvicorn default log config
+        access_log=True,  # Enable access log
     )

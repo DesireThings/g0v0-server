@@ -63,15 +63,15 @@ class V1Score(AllStrModel):
 @router.get(
     "/get_user_best",
     response_model=list[V1Score],
-    name="获取用户最好成绩",
-    description="获取指定用户的最好成绩。",
+    name="Get User Best Scores",
+    description="Get the best scores for the specified user.",
 )
 async def get_user_best(
     session: Database,
-    user: Annotated[str, Query(..., alias="u", description="用户")],
+    user: Annotated[str, Query(..., alias="u", description="User")],
     ruleset_id: Annotated[int, Query(alias="m", description="Ruleset ID", ge=0)] = 0,
-    type: Annotated[Literal["string", "id"] | None, Query(description="用户类型：string 用户名称 / id 用户 ID")] = None,
-    limit: Annotated[int, Query(ge=1, le=100, description="返回的成绩数量")] = 10,
+    type: Annotated[Literal["string", "id"] | None, Query(description="User lookup type: 'string' for username / 'id' for user ID")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of scores to return")] = 10,
 ):
     try:
         scores = (
@@ -96,15 +96,15 @@ async def get_user_best(
 @router.get(
     "/get_user_recent",
     response_model=list[V1Score],
-    name="获取用户最近成绩",
-    description="获取指定用户的最近成绩。",
+    name="Get User Recent Scores",
+    description="Get recent scores for the specified user.",
 )
 async def get_user_recent(
     session: Database,
-    user: Annotated[str, Query(..., alias="u", description="用户")],
+    user: Annotated[str, Query(..., alias="u", description="User")],
     ruleset_id: Annotated[int, Query(alias="m", description="Ruleset ID", ge=0)] = 0,
-    type: Annotated[Literal["string", "id"] | None, Query(description="用户类型：string 用户名称 / id 用户 ID")] = None,
-    limit: Annotated[int, Query(ge=1, le=100, description="返回的成绩数量")] = 10,
+    type: Annotated[Literal["string", "id"] | None, Query(description="User lookup type: 'string' for username / 'id' for user ID")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of scores to return")] = 10,
 ):
     try:
         scores = (
@@ -129,17 +129,17 @@ async def get_user_recent(
 @router.get(
     "/get_scores",
     response_model=list[V1Score],
-    name="获取成绩",
-    description="获取指定谱面的成绩。",
+    name="Get Scores",
+    description="Get scores for the specified beatmap.",
 )
 async def get_scores(
     session: Database,
-    beatmap_id: Annotated[int, Query(alias="b", description="谱面 ID")],
-    user: Annotated[str | None, Query(alias="u", description="用户")] = None,
+    beatmap_id: Annotated[int, Query(alias="b", description="Beatmap ID")],
+    user: Annotated[str | None, Query(alias="u", description="User")] = None,
     ruleset_id: Annotated[int, Query(alias="m", description="Ruleset ID", ge=0)] = 0,
-    type: Annotated[Literal["string", "id"] | None, Query(description="用户类型：string 用户名称 / id 用户 ID")] = None,
-    limit: Annotated[int, Query(ge=1, le=100, description="返回的成绩数量")] = 10,
-    mods: Annotated[int, Query(description="成绩的 MOD")] = 0,
+    type: Annotated[Literal["string", "id"] | None, Query(description="User lookup type: 'string' for username / 'id' for user ID")] = None,
+    limit: Annotated[int, Query(ge=1, le=100, description="Number of scores to return")] = 10,
+    mods: Annotated[int, Query(description="Score mods bitmask")] = 0,
 ):
     try:
         if user is not None:

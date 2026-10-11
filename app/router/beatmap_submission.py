@@ -87,8 +87,8 @@ def _local_submission_status(target: str | None) -> BeatmapRankStatus:
 @router.put(
     "/beatmapsets",
     response_model=PutBeatmapSetResponse,
-    name="初始化谱面上传",
-    description="初始化谱面集上传流程，返回谱面集 ID 和现有文件列表。",
+    name="Initialize Beatmapset Upload",
+    description="Initialize the beatmapset upload process, returning beatmapset ID and existing file list.",
 )
 async def initialize_beatmapset_upload(
     db: Database,
@@ -240,8 +240,8 @@ async def initialize_beatmapset_upload(
 
 @router.put(
     "/beatmapsets/{beatmapset_id}",
-    name="上传完整谱面集",
-    description="上传完整的 .osz 谱面集文件。",
+    name="Upload Full Beatmapset",
+    description="Upload a complete .osz beatmapset archive.",
     response_model=None,
 )
 async def upload_beatmapset_package(
@@ -249,8 +249,8 @@ async def upload_beatmapset_package(
     redis: Redis,
     storage: StorageService,
     cache_service: BeatmapsetCacheService,
-    beatmapset_id: Annotated[int, Path(..., description="谱面集 ID")],
-    beatmapArchive: Annotated[UploadFile, File(description="OSZ 文件")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
+    beatmapArchive: Annotated[UploadFile, File(description="OSZ archive file")],
     current_user: Annotated[User, Security(get_current_user, scopes=["public"])],
 ):
     beatmapset = await db.get(Beatmapset, beatmapset_id)
@@ -311,8 +311,8 @@ async def upload_beatmapset_package(
 
 @router.patch(
     "/beatmapsets/{beatmapset_id}",
-    name="增量更新谱面集",
-    description="增量上传修改的文件或删除文件。",
+    name="Incrementally Update Beatmapset",
+    description="Incrementally upload modified files or delete files.",
     response_model=None,
 )
 async def patch_beatmapset_package(
@@ -320,7 +320,7 @@ async def patch_beatmapset_package(
     redis: Redis,
     storage: StorageService,
     cache_service: BeatmapsetCacheService,
-    beatmapset_id: Annotated[int, Path(..., description="谱面集 ID")],
+    beatmapset_id: Annotated[int, Path(..., description="Beatmapset ID")],
     current_user: Annotated[User, Security(get_current_user, scopes=["public"])],
     filesChanged: Annotated[list[UploadFile] | None, File()] = None,
     filesDeleted: Annotated[list[str] | None, Form()] = None,

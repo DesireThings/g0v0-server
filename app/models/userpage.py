@@ -1,15 +1,15 @@
 """
-用户页面编辑相关的API模型
+Userpage editing related API models
 """
 
 from pydantic import BaseModel, Field, field_validator
 
 
 class UpdateUserpageRequest(BaseModel):
-    """更新用户页面请求模型（匹配官方osu-web格式）"""
+    """Update userpage request model (matches official osu-web format)"""
 
     body: str = Field(
-        description="用户页面的BBCode原始内容",
+        description="Raw BBCode content of the userpage",
         max_length=60000,
         examples=["[b]Hello![/b] This is my profile page.\n[color=blue]Blue text[/color]"],
     )
@@ -17,11 +17,11 @@ class UpdateUserpageRequest(BaseModel):
     @field_validator("body")
     @classmethod
     def validate_body_content(cls, v: str) -> str:
-        """验证原始内容"""
+        """Validate raw content"""
         if not v.strip():
             return ""
 
-        # 基本长度验证
+        # Basic length validation
         if len(v) > 60000:
             msg = "Content too long. Maximum 60000 characters allowed."
             raise ValueError(msg)
@@ -30,34 +30,34 @@ class UpdateUserpageRequest(BaseModel):
 
 
 class UpdateUserpageResponse(BaseModel):
-    """更新用户页面响应模型（匹配官方osu-web格式）"""
+    """Update userpage response model (matches official osu-web format)"""
 
-    html: str = Field(description="处理后的HTML内容")
+    html: str = Field(description="Processed HTML content")
 
 
 class UserpageResponse(BaseModel):
-    """用户页面响应模型（包含html和raw，匹配官方格式）"""
+    """Userpage response model (contains html and raw, matches official format)"""
 
-    html: str = Field(description="处理后的HTML内容")
-    raw: str = Field(description="原始BBCode内容")
+    html: str = Field(description="Processed HTML content")
+    raw: str = Field(description="Raw BBCode content")
 
 
 class ValidateBBCodeRequest(BaseModel):
-    """验证BBCode请求模型"""
+    """Validate BBCode request model"""
 
-    content: str = Field(description="要验证的BBCode内容", max_length=60000)
+    content: str = Field(description="BBCode content to validate", max_length=60000)
 
 
 class ValidateBBCodeResponse(BaseModel):
-    """验证BBCode响应模型"""
+    """Validate BBCode response model"""
 
-    valid: bool = Field(description="BBCode是否有效")
-    errors: list[str] = Field(default_factory=list, description="错误列表")
-    preview: dict[str, str] = Field(description="预览内容")
+    valid: bool = Field(description="Whether BBCode is valid")
+    errors: list[str] = Field(default_factory=list, description="List of errors")
+    preview: dict[str, str] = Field(description="Preview content")
 
 
 class UserpageError(Exception):
-    """用户页面处理错误基类"""
+    """Base class for userpage processing errors"""
 
     def __init__(self, message: str, code: str = "userpage_error"):
         self.message = message
@@ -66,7 +66,7 @@ class UserpageError(Exception):
 
 
 class ContentTooLongError(UserpageError):
-    """内容过长错误"""
+    """Content too long error"""
 
     def __init__(self, current_length: int, max_length: int):
         message = f"Content too long. Maximum {max_length} characters allowed, got {current_length}."
@@ -76,14 +76,14 @@ class ContentTooLongError(UserpageError):
 
 
 class ContentEmptyError(UserpageError):
-    """内容为空错误"""
+    """Content empty error"""
 
     def __init__(self):
         super().__init__("Content cannot be empty.", "content_empty")
 
 
 class BBCodeValidationError(UserpageError):
-    """BBCode验证错误"""
+    """BBCode validation error"""
 
     def __init__(self, errors: list[str]):
         message = f"BBCode validation failed: {'; '.join(errors)}"
@@ -92,7 +92,7 @@ class BBCodeValidationError(UserpageError):
 
 
 class ForbiddenTagError(UserpageError):
-    """禁止标签错误"""
+    """Forbidden tag error"""
 
     def __init__(self, tag: str):
         message = f"Forbidden tag '{tag}' is not allowed."
@@ -101,7 +101,7 @@ class ForbiddenTagError(UserpageError):
 
 
 class MaliciousBBCodeError(UserpageError):
-    """恶意BBCode错误"""
+    """Malicious BBCode error"""
 
     def __init__(self, detail: str):
         message = f"Malicious BBCode detected: {detail}"

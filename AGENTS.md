@@ -1,80 +1,80 @@
 # AGENTS
 
-> 使用自动化与 AI 代理（GitHub Copilot、依赖/CI 机器人，以及仓库中的运行时调度器/worker）的指导原则，适用于 g0v0-server 仓库。
+> Guidelines for using automation and AI agents (GitHub Copilot, dependency/CI bots, and runtime schedulers/workers in the repository) for the g0v0-server repository.
 
 ---
 
-## API 参考
+## API Reference
 
-本项目必须保持与公开的 osu! API 兼容。在添加或映射端点时请参考：
+This project must maintain compatibility with the public osu! API. When adding or mapping endpoints, please refer to:
 
-- **v1（旧版）：** [https://github.com/ppy/osu-api/wiki](https://github.com/ppy/osu-api/wiki)
-- **v2（OpenAPI）：** [https://osu.ppy.sh/docs/openapi.yaml](https://osu.ppy.sh/docs/openapi.yaml)
+- **v1 (Legacy):** [https://github.com/ppy/osu-api/wiki](https://github.com/ppy/osu-api/wiki)
+- **v2 (OpenAPI):** [https://osu.ppy.sh/docs/openapi.yaml](https://osu.ppy.sh/docs/openapi.yaml)
 
-任何在 `app/router/v1/`、`app/router/v2/` 或 `app/router/notification/` 中的实现必须与官方规范保持一致。自定义或实验性的端点应放在 `app/router/private/` 中。
-
----
-
-## 代理类别
-
-允许的代理分为三类：
-
-- **代码生成/补全代理**（如 GitHub Copilot 或其他 LLM）—— **仅当** 有维护者审核并批准输出时允许使用。
-- **自动维护代理**（如 Dependabot、Renovate、pre-commit.ci）—— 允许使用，但必须遵守严格的 PR 和 CI 政策。
-- **运行时/后台代理**（调度器、worker）—— 属于产品代码的一部分；必须遵守生命周期、并发和幂等性规范。
-
-所有由代理生成或建议的更改必须遵守以下规则。
+Any implementation in `app/router/v1/`, `app/router/v2/`, or `app/router/notification/` must remain consistent with the official specifications. Custom or experimental endpoints must be placed in `app/router/private/`.
 
 ---
 
-## 所有代理的规则
+## Agent Categories
 
-1. **单一职责的 PR。** 代理的 PR 必须只解决一个问题（一个功能、一个 bug 修复或一次依赖更新）。提交信息应使用 Angular 风格（如 `feat(api): add ...`）。
-2. **通过 Lint 与 CI 检查。** 每个 PR（包括代理创建的）在合并前必须通过 `pyright`、`ruff`、`pre-commit` 钩子和仓库 CI。PR 中应附带 CI 运行结果链接。
-3. **绝不可提交敏感信息。** 代理不得提交密钥、密码、token 或真实 `.env` 值。如果检测到可能的敏感信息，代理必须中止并通知指定的维护者。
-4. **API 位置限制。** 不得在 `app/router/v1` 或 `app/router/v2` 下添加新的公开端点，除非该端点在官方 v1/v2 规范中存在。自定义或实验性端点必须放在 `app/router/private/`。
-5. **保持公共契约稳定。** 未经批准的迁移计划，不得随意修改响应 schema、路由前缀或其他公共契约。若有变更，PR 中必须包含明确的兼容性说明。
+Permitted agents are divided into three categories:
+
+- **Code generation / completion agents** (e.g., GitHub Copilot or other LLMs) — Permitted **only when** a maintainer reviews and approves the output.
+- **Automated maintenance agents** (e.g., Dependabot, Renovate, pre-commit.ci) — Permitted, but must adhere to strict PR and CI policies.
+- **Runtime / background agents** (schedulers, workers) — Part of production code; must adhere to lifecycle, concurrency, and idempotency specifications.
+
+All changes generated or suggested by agents must comply with the following rules.
 
 ---
 
-## Copilot / LLM 使用
+## Rules for All Agents
 
-> 关于在本仓库中使用 GitHub Copilot 和其他基于 LLM 的辅助工具的统一指导。
+1. **Single-responsibility PRs.** An agent's PR must solve only one issue (one feature, one bug fix, or one dependency update). Commit messages should follow the Angular style (e.g., `feat(api): add ...`).
+2. **Pass Lint and CI checks.** Every PR (including those created by agents) must pass `pyright`, `ruff`, `pre-commit` hooks, and repository CI before merging. PRs should include links to CI run results.
+3. **Never commit secrets.** Agents must not commit secrets, passwords, tokens, or real `.env` values. If potential secrets are detected, the agent must abort and notify designated maintainers.
+4. **API location restrictions.** Do not add new public endpoints under `app/router/v1` or `app/router/v2` unless the endpoint exists in the official v1/v2 specification. Custom or experimental endpoints must be placed in `app/router/private/`.
+5. **Keep public contracts stable.** Do not modify response schemas, route prefixes, or other public contracts without an approved migration plan. If changes occur, the PR must include clear compatibility explanations.
 
-### 关键项目结构（需要了解的内容）
+---
 
-- **应用入口：** `main.py` —— FastAPI 应用，包含启动/关闭生命周期管理（fetchers、GeoIP、调度器、缓存与健康检查、Redis 消息、统计、成就系统）。
+## Copilot / LLM Usage
 
-- **路由：** `app/router/` 包含所有路由组。主要的路由包括：
-  - `v1/`（v1 端点）
-  - `v2/`（v2 端点）
-  - `notification/` 路由（聊天/通知子系统）
-  - `auth.py`（认证/token 流程）
-  - `private/`（自定义或实验性的端点）
+> Unified guidance on using GitHub Copilot and other LLM-based assistive tools in this repository.
 
-  **规则：** `v1/` 和 `v2/` 必须与官方 API 对应。仅内部或实验端点应放在 `app/router/private/`。
+### Key Project Structure (Things to Know)
 
-- **模型与数据库工具：**
-  - SQLModel/ORM 模型在 `app/database/`。
-  - 非数据库模型在 `app/models/`。
-  - 修改模型/schema 时必须生成 Alembic 迁移，并手动检查生成的 SQL 与索引。
+- **Application Entry Point:** `main.py` — FastAPI application containing startup/shutdown lifecycle management (fetchers, GeoIP, scheduler, caching & health checks, Redis messaging, statistics, achievement system).
 
-- **服务层：** `app/service/` 保存领域逻辑（如缓存工具、通知/邮件逻辑）。复杂逻辑应放在 service，而不是路由处理器中。
+- **Routers:** `app/router/` contains all route groups. Major routes include:
+  - `v1/` (v1 endpoints)
+  - `v2/` (v2 endpoints)
+  - `notification/` routes (chat/notification subsystem)
+  - `auth.py` (authentication/token flows)
+  - `private/` (custom or experimental endpoints)
 
-- **任务：** `app/tasks/` 保存任务（定时任务、启动任务、关闭任务）。
-  - 均在 `__init__.py` 进行导出。
-  - 对于启动任务/关闭任务，在 `main.py` 的 `lifespan` 调用。
-  - 定时任务使用 APScheduler
+  **Rule:** `v1/` and `v2/` must correspond to the official API. Only internal or experimental endpoints should be placed in `app/router/private/`.
 
-- **缓存与依赖：** 使用 `app/dependencies/` 提供的 Redis 依赖和缓存服务（遵循现有 key 命名约定，如 `user:{id}:...`）。
+- **Models and Database Tools:**
+  - SQLModel/ORM models are in `app/database/`.
+  - Non-database models are in `app/models/`.
+  - When modifying models/schemas, Alembic migrations must be generated, and the generated SQL and indexes must be inspected manually.
 
-- **日志：** 使用 `app/log` 提供的日志工具。
+- **Service Layer:** `app/service/` holds domain logic (e.g., caching utilities, notification/email logic). Complex logic should be placed in services, not in router handlers.
 
-### 实用工作流（提示模式）
+- **Tasks:** `app/tasks/` holds tasks (scheduled tasks, startup tasks, shutdown tasks).
+  - All are exported in `__init__.py`.
+  - Startup/shutdown tasks are invoked in `main.py`'s `lifespan`.
+  - Scheduled tasks use APScheduler.
 
-- **添加 v2 端点（正确方式）：** 在 `app/router/v2/` 下添加文件，导出路由，实现基于数据库与缓存依赖的异步处理函数。**不得**在 v1/v2 添加非官方端点。
-- **添加自定义端点：** 放在 `app/router/private/`，保持处理器精简，将业务逻辑放入 `app/service/`。
-- **鉴权：** 使用 [`app.dependencies.user`](./app/dependencies/user.py) 提供的依赖注入，如 `ClientUser` 和 `get_current_user`，参考下方。
+- **Caching and Dependencies:** Use Redis dependencies and caching services provided in `app/dependencies/` (following existing key naming conventions, e.g., `user:{id}:...`).
+
+- **Logging:** Use the logging utility provided in `app/log`.
+
+### Practical Workflows (Prompt Patterns)
+
+- **Adding a v2 endpoint (the right way):** Add a file under `app/router/v2/`, export the router, and implement an async handler based on database and cache dependencies. **Do not** add non-official endpoints to v1/v2.
+- **Adding custom endpoints:** Place in `app/router/private/`, keep handlers concise, and put business logic into `app/service/`.
+- **Authentication:** Use dependency injection provided by [`app.dependencies.user`](./app/dependencies/user.py), such as `ClientUser` and `get_current_user`, as shown below:
   
   ```python
   from typing import Annotated
@@ -92,27 +92,27 @@
       ...
   ```
 
-- **添加后台任务：** 将任务逻辑写在 `app/service/_job.py`（幂等、可重试）。调度器入口放在 `app/scheduler/_scheduler.py`，并在应用生命周期注册。
-- **数据库 schema 变更：** 修改 `app/models/` 中的 SQLModel 模型，运行 `alembic revision --autogenerate`，检查迁移并本地测试 `alembic upgrade head` 后再提交。
-- **缓存写入与响应：** 使用现有的 `UserResp` 模式和 `UserCacheService`；异步缓存写入应使用后台任务。
+- **Adding background tasks:** Write task logic in `app/service/_job.py` (idempotent, retryable). Place scheduler entry points in `app/scheduler/_scheduler.py`, and register in the application lifecycle.
+- **Database schema changes:** Modify SQLModel models in `app/models/`, run `alembic revision --autogenerate`, check the migration, and test `alembic upgrade head` locally before committing.
+- **Cache writes and responses:** Use existing `UserResp` models and `UserCacheService`; async cache writes should use background tasks.
 
-### 提示指导（给 LLM/Copilot 的输入）
+### Prompting Guidance (Input for LLMs / Copilot)
 
-- 明确文件位置和限制（如：`Add an async endpoint under app/router/private/... DO NOT add to app/router/v1 or v2`）。
-- 要求异步处理函数、依赖注入 DB/Redis、复用已有服务/工具、加上类型注解，并生成最小化 pytest 测试样例。
+- Specify exact file locations and constraints (e.g., `Add an async endpoint under app/router/private/... DO NOT add to app/router/v1 or v2`).
+- Request async handler functions, DB/Redis dependency injection, reuse of existing services/utilities, proper type annotations, and minimal pytest test cases.
 
-### 约定与质量要求
+### Conventions & Quality Requirements
 
-- **使用 Annotated-style 依赖注入** 在路由处理器中。
-- **提交信息风格：** `type(scope): subject`（Angular 风格）。
-- **优先异步：** 路由必须为异步函数；避免阻塞事件循环。
-- **关注点分离：** 业务逻辑应放在 service，而不是路由中。
-- **错误处理：** 客户端错误用 `HTTPException`，服务端错误使用结构化日志。
-- **类型与 lint：** 在请求评审前，代码必须通过 `pyright` 和 `ruff` 检查。
-- **注释：** 避免过多注释，仅为晦涩逻辑添加简洁的“魔法注释”。
-- **日志：** 使用 `app.log` 提供的 `log` 函数获取 logger 实例。（服务、任务除外）
+- **Use Annotated-style dependency injection** in route handlers.
+- **Commit message style:** `type(scope): subject` (Angular style).
+- **Async first:** Route handlers must be async functions; avoid blocking the event loop.
+- **Separation of concerns:** Business logic should reside in services, not in routes.
+- **Error handling:** Use `HTTPException` for client errors; use structured logging for server errors.
+- **Types and linting:** Code must pass `pyright` and `ruff` checks before requesting review.
+- **Comments:** Avoid excessive comments; only add concise explanations for non-obvious logic.
+- **Logging:** Use the `log` function provided in `app.log` to get a logger instance (except for services and tasks).
 
-### 工具参考
+### Tooling Reference
 
 ```
 uv sync
@@ -125,36 +125,36 @@ alembic upgrade head
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### PR 范围指导
+### PR Scope Guidance
 
-- 保持 PR 专注：一次只做一件事（如端点或重构，不要混合）。
-- 不确定时，请参考现有服务，并添加简短说明性注释。
+- Keep PRs focused: do one thing at a time (e.g., endpoints or refactoring, do not mix).
+- When unsure, consult existing services and add brief explanatory comments.
 
-### PR 审核规则
+### PR Review Rules
 
-> GitHub Copilot PR review 可参考。
+> Reference for GitHub Copilot PR reviews.
 
-1. 如果 PR 修改了端点，简要说明端点的用途和预期行为。同时检查是否满足上述的 API 位置限制。
-2. 如果 PR 修改了数据库模型，必须包含 Alembic 迁移。检查迁移的 SQL 语句和索引是否合理。
-3. 修改的其他功能需要提供简短的说明。
-4. 提供性能优化的建议（见下文）。
+1. If the PR modifies endpoints, briefly explain the endpoint's purpose and expected behavior. Also verify whether it meets the API location restrictions above.
+2. If the PR modifies database models, it must include an Alembic migration. Verify that the migration's SQL statements and indexes are appropriate.
+3. Other modified functionality must include a brief explanation.
+4. Provide performance optimization suggestions (see below).
 
 ---
 
-## 性能优化提示
+## Performance Optimization Tips
 
-以下为结合本仓库架构（FastAPI + SQLModel/SQLAlchemy、Redis 缓存、后台调度器）总结的性能优化建议：
+The following performance optimization suggestions are tailored to this repository's architecture (FastAPI + SQLModel/SQLAlchemy, Redis caching, background scheduler):
 
-### 数据库
+### Database
 
-- **仅选择必要字段。** 使用 `select(Model.col1, Model.col2)`，避免 `select(Model)`。
+- **Select only required columns.** Use `select(Model.col1, Model.col2)` instead of `select(Model)`.
 
 ```py
 stmt = select(User.id, User.username).where(User.active == True)
 rows = await session.execute(stmt)
 ```
 
-- **使用 `select(exists())` 检查存在性。** 避免加载整行：
+- **Use `select(exists())` to check existence.** Avoid loading full rows:
 
 ```py
 from sqlalchemy import select, exists
@@ -162,21 +162,18 @@ exists_stmt = select(exists().where(User.id == some_id))
 found = await session.scalar(exists_stmt)
 ```
 
-- **避免 N+1 查询。** 需要关联对象时用 `selectinload`、`joinedload`。
+- **Avoid N+1 queries.** Use `selectinload` or `joinedload` when related objects are needed.
 
-- **批量操作。** 插入/更新时应批量执行，并放在一个事务中，而不是多个小事务。
+- **Batch operations.** Insert/update operations should be executed in batches within a single transaction rather than multiple small transactions.
 
 
-### 耗时任务
-
-- 如果这个任务来自 API Router，请使用 FastAPI 提供的 [`BackgroundTasks`](https://fastapi.tiangolo.com/tutorial/background-tasks)
-- 其他情况，使用 `app.utils` 的 `bg_tasks`，它提供了与 FastAPI 的 `BackgroundTasks` 类似的功能。
+- If the task originates from an API router, use FastAPI's [`BackgroundTasks`](https://fastapi.tiangolo.com/tutorial/background-tasks).
+- Otherwise, use `bg_tasks` from `app.utils`, which provides functionality similar to FastAPI's `BackgroundTasks`.
 
 ---
 
-## 部分 LLM 的额外要求
+## Additional Requirements for Specific LLMs
 
 ### Claude Code
 
-- 禁止创建额外的测试脚本。
-
+- Do not create extra test scripts.

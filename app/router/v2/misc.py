@@ -17,16 +17,16 @@ from sqlmodel import case, col, func, or_, select
 
 
 class Background(BaseModel):
-    """季节背景图单项。
-    - url: 图片链接地址。"""
+    """Seasonal background item.
+    - url: Image URL."""
 
     url: str
 
 
 class BackgroundsResp(BaseModel):
-    """季节背景图返回模型。
-    - ends_at: 结束时间（若为远未来表示长期有效）。
-    - backgrounds: 背景图列表。"""
+    """Seasonal backgrounds response model.
+    - ends_at: Expiration time (far future represents long-term validity).
+    - backgrounds: List of backgrounds."""
 
     ends_at: datetime = datetime(year=9999, month=12, day=31, tzinfo=UTC)
     backgrounds: list[Background]
@@ -65,9 +65,9 @@ async def _viewer_allows_nsfw_media(current_user: User | None) -> bool:
 @router.get(
     "/seasonal-backgrounds",
     response_model=BackgroundsResp,
-    tags=["杂项"],
-    name="获取季节背景图列表",
-    description="获取当前季节背景图列表。",
+    tags=["Misc"],
+    name="Get Seasonal Backgrounds List",
+    description="Get current seasonal backgrounds list.",
 )
 async def get_seasonal_backgrounds():
     return BackgroundsResp(backgrounds=[Background(url=url) for url in settings.seasonal_backgrounds])
@@ -288,7 +288,7 @@ class ServerStatusResp(BaseModel):
 
 @router.get(
     "/server/status",
-    name="服务器状态",
+    name="Server Status",
     description="Lightweight public status endpoint used by clients to surface maintenance banners.",
     response_model=ServerStatusResp,
 )

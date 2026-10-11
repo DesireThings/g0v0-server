@@ -108,18 +108,18 @@ class AWSS3StorageService(StorageService):
         parsed = urlparse(url)
         path = parsed.path.lstrip("/")
 
-        # 1. 如果是 public_url_base 拼接出来的
+        # 1. If constructed with public_url_base
         if self.public_url_base and url.startswith(self.public_url_base.rstrip("/")):
             return path
 
-        # 2. 如果是 S3 path-style: s3.amazonaws.com/<bucket>/<key>
+        # 2. If S3 path-style: s3.amazonaws.com/<bucket>/<key>
         if parsed.netloc == "s3.amazonaws.com":
             parts = path.split("/", 1)
             return parts[1] if len(parts) > 1 else None
 
-        # 3. 如果是 virtual-hosted-style: <bucket>.s3.<region>.amazonaws.com/<key>
+        # 3. If virtual-hosted-style: <bucket>.s3.<region>.amazonaws.com/<key>
         if ".s3." in parsed.netloc or parsed.netloc.endswith(".s3.amazonaws.com"):
             return path
 
-        # 4. 直接返回 path
+        # 4. Return path directly
         return path or None

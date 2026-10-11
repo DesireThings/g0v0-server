@@ -316,22 +316,22 @@ class SoloScoreSubmissionInfo(BaseModel):
 
     @field_serializer("statistics", "maximum_statistics", when_used="json")
     def serialize_statistics(self, v):
-        """序列化统计字段，确保枚举值正确转换为字符串"""
+        """Serialize statistics field, ensuring enum values are correctly converted to strings"""
         if isinstance(v, dict):
             serialized = {}
             for key, value in v.items():
                 if hasattr(key, "value"):
-                    # 如果是枚举，使用其值
+                    # If it is an enum, use its value
                     serialized[key.value] = value
                 else:
-                    # 否则直接使用键
+                    # Otherwise use key directly
                     serialized[str(key)] = value
             return serialized
         return v
 
     @field_serializer("rank", when_used="json")
     def serialize_rank(self, v):
-        """序列化等级，确保枚举值正确转换为字符串"""
+        """Serialize grade, ensuring enum value is correctly converted to string"""
         if hasattr(v, "value"):
             return v.value
         return str(v)

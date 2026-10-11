@@ -1,7 +1,7 @@
 """
-FastAPI会话验证中间件
+FastAPI session verification middleware.
 
-基于osu-web的会话验证系统，适配FastAPI框架
+Based on osu-web session verification system, adapted for FastAPI framework.
 """
 
 from collections.abc import Callable
@@ -27,9 +27,9 @@ logger = log("Middleware")
 
 
 class SessionState:
-    """会话状态类
+    """Session state class.
 
-    简化版本的会话状态管理
+    Simplified session state management.
     """
 
     def __init__(self, session: LoginSession, user: User, redis: Redis, db: AsyncSession, api_version: int = 0) -> None:
@@ -41,13 +41,13 @@ class SessionState:
         self._verification_method: str | None = None
 
     def is_verified(self) -> bool:
-        """检查会话是否已验证"""
+        """Check if session is verified."""
         return self.session.is_verified
 
     async def get_method(self) -> str:
-        """获取验证方法"""
+        """Get verification method."""
         if self._verification_method is None:
-            # 从Redis获取已设置的方法
+            # Get configured method from Redis
             token_id = self.session.token_id
             if token_id is not None:
                 self._verification_method = await LoginSessionService.get_login_method(
@@ -72,7 +72,7 @@ class SessionState:
         return self._verification_method
 
     async def mark_verified(self) -> None:
-        """标记会话为已验证"""
+        """Mark session as verified."""
         try:
             token_id = self.session.token_id
             if token_id is not None:
@@ -89,12 +89,12 @@ class SessionState:
             logger.error(f"Error marking verified: {e}")
 
     async def issue_mail_if_needed(self) -> None:
-        """如果需要，发送验证邮件"""
+        """Send verification email if needed."""
         try:
             if await self.get_method() == "mail":
                 from app.service.verification_service import EmailVerificationService
 
-                # 这里可以触发邮件发送
+                # Email sending can be triggered here
                 await EmailVerificationService.send_verification_email(
                     self.db,
                     self.redis,
@@ -109,27 +109,27 @@ class SessionState:
             logger.error(f"Error issuing mail: {e}")
 
     def get_key(self) -> str:
-        """获取会话密钥"""
+        """Get session key."""
         return str(self.session.id) if self.session.id else ""
 
     @property
     def key_for_event(self) -> str:
-        """获取用于事件广播的会话密钥"""
+        """Get session key for event broadcasting."""
         return LoginSessionService.get_key_for_event(self.get_key())
 
     @property
     def user_id(self) -> int:
-        """获取用户ID"""
+        """Get user ID."""
         return self.user.id
 
 
 class VerifySessionMiddleware(BaseHTTPMiddleware):
-    """会话验证中间件
+    """Session verification middleware.
 
-    参考osu-web的VerifyUser中间件，适配FastAPI
+    Referenced from osu-web VerifyUser middleware, adapted for FastAPI.
     """
 
-    # 需要跳过验证的路由
+    # Routes that skip verification
     SKIP_VERIFICATION_ROUTES: ClassVar[set[str]] = {
         "/api/v2/session/verify",
         "/api/v2/session/verify/reissue",
@@ -145,14 +145,14 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
         "/redoc",
     }
 
-    # 总是需要验证的路由前缀
+    # Route prefixes that always require verification
     ALWAYS_VERIFY_PATTERNS: ClassVar[set[str]] = {
         "/api/private/admin/",
     }
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """中间件主处理逻辑"""
-        # 检查是否跳过验证
+        """Main middleware dispatch logic."""
+        # Check if verification should be skipped
         if self._should_skip_verification(request):
             return await call_next(request)
 
@@ -165,46 +165,46 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
             if not needs_verify:
                 return await call_next(request)
 
-        # 获取当前用户
+        # Get current user
         user = await self._get_current_user(request)
         if not user:
-            # 未登录用户跳过验证
+            # Unauthenticated users skip verification
             return await call_next(request)
 
-        # 获取会话状态
+        # Get session state
         session_state = await self._get_session_state(request, user)
         if not session_state:
-            # 无会话状态，继续请求
+            # No session state, continue request
             return await call_next(request)
 
-        # 检查是否已验证
+        # Check if already verified
         if session_state.is_verified():
             return await call_next(request)
 
-        # 检查是否需要验证
+        # Check if verification is required
         if not self._requires_verification(request, user):
             return await call_next(request)
 
-        # 启动验证流程
+        # Initiate verification flow
         return await self._initiate_verification(session_state)
 
     def _should_skip_verification(self, request: Request) -> bool:
-        """检查是否应该跳过验证"""
+        """Check if verification should be skipped."""
         path = request.url.path
 
-        # 完全匹配的跳过路由
+        # Exact match routes to skip
         if path in self.SKIP_VERIFICATION_ROUTES:
             return True
 
-        # 非API请求跳过
+        # Skip non-API requests
         return bool(not path.startswith("/api/"))
 
     def _requires_verification(self, request: Request, user: User) -> bool:
-        """检查是否需要验证"""
+        """Check if verification is required."""
         path = request.url.path
         method = request.method
 
-        # 检查是否为强制验证的路由
+        # Check if route always requires verification
         for pattern in self.ALWAYS_VERIFY_PATTERNS:
             if path.startswith(pattern):
                 return True
@@ -212,32 +212,32 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
         if not user.is_active:
             return True
 
-        # 安全方法（GET/HEAD/OPTIONS）一般不需要验证
+        # Safe methods (GET/HEAD/OPTIONS) generally do not require verification
         safe_methods = {"GET", "HEAD", "OPTIONS"}
         if method in safe_methods:
             return False
 
-        # 修改操作（POST/PUT/DELETE/PATCH）需要验证
+        # Mutation operations (POST/PUT/DELETE/PATCH) require verification
         return method in {"POST", "PUT", "DELETE", "PATCH"}
 
     async def _get_current_user(self, request: Request) -> User | None:
-        """获取当前用户"""
+        """Get current user."""
         try:
-            # 从Authorization header提取token
+            # Extract token from Authorization header
             auth_header = request.headers.get("Authorization", "")
             if not auth_header.startswith("Bearer "):
                 return None
 
-            token = auth_header[7:]  # 移除"Bearer "前缀
+            token = auth_header[7:]  # Remove "Bearer " prefix
 
-            # 创建专用数据库会话
+            # Create dedicated database session
             async with with_db() as db:
-                # 获取token记录
+                # Get token record
                 token_record = await get_token_by_access_token(db, token)
                 if not token_record:
                     return None
 
-                # 获取用户
+                # Get user
                 user = (await db.exec(select(User).where(User.id == token_record.user_id))).first()
                 return user
 
@@ -246,9 +246,9 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
             return None
 
     async def _get_session_state(self, request: Request, user: User) -> SessionState | None:
-        """获取会话状态"""
+        """Get session state."""
         try:
-            # 提取会话token（这里简化为使用相同的auth token）
+            # Extract session token (simplified here to use the same auth token)
             auth_header = request.headers.get("Authorization", "")
             api_version = 0
             raw_api_version = request.headers.get("x-api-version")
@@ -263,11 +263,11 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
 
             session_token = auth_header[7:]
 
-            # 获取数据库和Redis连接
+            # Get database and Redis connections
             async with with_db() as db:
                 redis = get_redis()
 
-                # 查找会话
+                # Find session
                 session = await LoginSessionService.find_for_verification(db, session_token)
                 if not session or session.user_id != user.id:
                     return None
@@ -279,13 +279,13 @@ class VerifySessionMiddleware(BaseHTTPMiddleware):
             return None
 
     async def _initiate_verification(self, state: SessionState) -> Response:
-        """启动验证流程"""
+        """Initiate verification flow."""
         try:
             method = await state.get_method()
             if method == "mail":
                 await state.issue_mail_if_needed()
 
-            # 返回验证要求响应
+            # Return verification required response
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"method": method, "message": "Session verification required"},

@@ -297,7 +297,7 @@ class ChatServer:
 
     async def join_room_channel(self, channel_id: int, user_id: int):
         async with with_db() as session:
-            # 使用明确的查询避免延迟加载
+            # Use explicit query to avoid lazy loading issues
             db_channel = (await session.exec(select(ChatChannel).where(ChatChannel.channel_id == channel_id))).first()
             if db_channel is None:
                 logger.warning(f"Attempted to join non-existent channel {channel_id} by user {user_id}")
@@ -313,7 +313,7 @@ class ChatServer:
 
     async def leave_room_channel(self, channel_id: int, user_id: int):
         async with with_db() as session:
-            # 使用明确的查询避免延迟加载
+            # Use explicit query to avoid lazy loading issues
             db_channel = (await session.exec(select(ChatChannel).where(ChatChannel.channel_id == channel_id))).first()
             if db_channel is None:
                 logger.warning(f"Attempted to leave non-existent channel {channel_id} by user {user_id}")
@@ -374,9 +374,9 @@ async def _listen_stop(ws: WebSocket, user_id: int):
 @chat_router.websocket("/notification-server")
 async def chat_websocket(
     websocket: WebSocket,
-    token: Annotated[str | None, Query(description="认证令牌，支持通过URL参数传递")] = None,
-    access_token: Annotated[str | None, Query(description="访问令牌，支持通过URL参数传递")] = None,
-    authorization: Annotated[str | None, Header(description="Bearer认证头")] = None,
+    token: Annotated[str | None, Query(description="Authentication token, supports URL parameter")] = None,
+    access_token: Annotated[str | None, Query(description="Access token, supports URL parameter")] = None,
+    authorization: Annotated[str | None, Header(description="Bearer authentication header")] = None,
 ):
     if not server._subscribed:
         server._subscribed = True

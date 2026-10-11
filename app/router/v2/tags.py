@@ -23,10 +23,10 @@ class APITagCollection(BaseModel):
 
 @router.get(
     "/tags",
-    tags=["用户标签"],
+    tags=["User Tags"],
     response_model=APITagCollection,
-    name="获取所有标签",
-    description="获取所有可用的谱面标签。",
+    name="Get All Tags",
+    description="Get all available beatmap tags.",
 )
 async def router_get_all_tags():
     return APITagCollection(tags=get_all_tags())
@@ -47,14 +47,14 @@ async def check_user_can_vote(user: User, beatmap_id: int, session: AsyncSession
 
 @router.put(
     "/beatmaps/{beatmap_id}/tags/{tag_id}",
-    tags=["用户标签"],
+    tags=["User Tags"],
     status_code=204,
-    name="为谱面投票标签",
-    description="为指定谱面添加标签投票。",
+    name="Vote for Beatmap Tag",
+    description="Add a tag vote for the specified beatmap.",
 )
 async def vote_beatmap_tags(
-    beatmap_id: Annotated[int, Path(..., description="谱面 ID")],
-    tag_id: Annotated[int, Path(..., description="标签 ID")],
+    beatmap_id: Annotated[int, Path(..., description="Beatmap ID")],
+    tag_id: Annotated[int, Path(..., description="Tag ID")],
     session: Database,
     current_user: Annotated[User, Depends(get_client_user)],
 ):
@@ -84,22 +84,22 @@ async def vote_beatmap_tags(
 
 @router.delete(
     "/beatmaps/{beatmap_id}/tags/{tag_id}",
-    tags=["用户标签", "谱面"],
+    tags=["User Tags", "Beatmaps"],
     status_code=204,
-    name="取消谱面标签投票",
-    description="取消对指定谱面标签的投票。",
+    name="Remove Beatmap Tag Vote",
+    description="Remove vote for specified beatmap tag.",
 )
 async def devote_beatmap_tags(
-    beatmap_id: Annotated[int, Path(..., description="谱面 ID")],
-    tag_id: Annotated[int, Path(..., description="标签 ID")],
+    beatmap_id: Annotated[int, Path(..., description="Beatmap ID")],
+    tag_id: Annotated[int, Path(..., description="Tag ID")],
     session: Database,
     current_user: Annotated[User, Depends(get_client_user)],
 ):
     """
-    取消对谱面指定标签的投票。
+    Remove vote for specified beatmap tag.
 
-    - **beatmap_id**: 谱面ID
-    - **tag_id**: 标签ID
+    - **beatmap_id**: Beatmap ID
+    - **tag_id**: Tag ID
     """
     if await current_user.is_restricted(session):
         raise HTTPException(status_code=403, detail="Your account is restricted and cannot perform this action.")

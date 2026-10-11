@@ -32,8 +32,8 @@ RESTRICTED_ACCESS_DETAIL = (
 oauth2_password = OAuth2PasswordBearer(
     tokenUrl="oauth/token",
     refreshUrl="oauth/token",
-    scopes={"*": "允许访问全部 API。"},
-    description="osu!lazer 或网页客户端密码登录认证，具有全部权限",
+    scopes={"*": "Allow access to all APIs."},
+    description="osu!lazer or web client password login authentication, with full permissions",
     scheme_name="Password Grant",
     auto_error=False,
 )
@@ -43,16 +43,16 @@ oauth2_code = OAuth2AuthorizationCodeBearer(
     tokenUrl="oauth/token",
     refreshUrl="oauth/token",
     scopes={
-        "chat.read": "允许代表用户读取聊天消息。",
-        "chat.write": "允许代表用户发送聊天消息。",
-        "chat.write_manage": ("允许代表用户加入和离开聊天频道。"),
-        "delegate": ("允许作为客户端的所有者进行操作；仅适用于客户端凭证授权。"),
-        "forum.write": "允许代表用户创建和编辑论坛帖子。",
-        "friends.read": "允许读取用户的好友列表。",
-        "identify": "允许读取用户的公开资料 (/me)。",
-        "public": "允许代表用户读取公开数据。",
+        "chat.read": "Allow reading chat messages on behalf of user.",
+        "chat.write": "Allow sending chat messages on behalf of user.",
+        "chat.write_manage": ("Allow joining and leaving chat channels on behalf of user."),
+        "delegate": ("Allow acting as client owner; only applicable for client credentials grant."),
+        "forum.write": "Allow creating and editing forum posts on behalf of user.",
+        "friends.read": "Allow reading user's friend list.",
+        "identify": "Allow reading user's public profile (/me).",
+        "public": "Allow reading public data on behalf of user.",
     },
-    description="osu! OAuth 认证 （授权码认证）",
+    description="osu! OAuth authentication (Authorization Code Grant)",
     scheme_name="Authorization Code Grant",
     auto_error=False,
 )
@@ -61,21 +61,21 @@ oauth2_client_credentials = OAuth2ClientCredentialsBearer(
     tokenUrl="oauth/token",
     refreshUrl="oauth/token",
     scopes={
-        "public": "允许读取公开数据。",
+        "public": "Allow reading public data.",
     },
-    description="osu! OAuth 认证 （客户端凭证流）",
+    description="osu! OAuth authentication (Client Credentials Grant)",
     scheme_name="Client Credentials Grant",
     auto_error=False,
 )
 
-v1_api_key = APIKeyQuery(name="k", scheme_name="V1 API Key", description="v1 API 密钥")
+v1_api_key = APIKeyQuery(name="k", scheme_name="V1 API Key", description="v1 API key")
 
 
 async def v1_authorize(
     db: Database,
     api_key: Annotated[str, Depends(v1_api_key)],
 ):
-    """V1 API Key 授权"""
+    """V1 API Key authorization"""
     if not api_key:
         raise HTTPException(status_code=401, detail="Missing API key")
 
@@ -129,21 +129,21 @@ async def get_client_user(
     user, token = user_and_token
 
     if await LoginSessionService.check_is_need_verification(db, user.id, token.id):
-        # 获取当前验证方式
+        # Get current verification method
         verify_method = None
         if api_version >= SUPPORT_TOTP_VERIFICATION_VER:
             verify_method = await LoginSessionService.get_login_method(user.id, token.id, redis)
 
         if verify_method is None:
-            # 智能选择验证方式（参考 osu-web State.php:36）
+            # Intelligently select verification method (referencing osu-web State.php:36)
             totp_key = await user.awaitable_attrs.totp_key
             verify_method = "totp" if totp_key is not None and api_version >= SUPPORT_TOTP_VERIFICATION_VER else "mail"
 
-            # 设置选择的验证方法到Redis中，避免重复选择
+            # Store selected verification method in Redis to avoid re-selection
             if api_version >= SUPPORT_TOTP_VERIFICATION_VER:
                 await LoginSessionService.set_login_method(user.id, token.id, verify_method, redis)
 
-        # 返回符合 osu! API 标准的错误响应
+        # Return error response matching osu! API standard
         error_response = {"error": "User not verified", "method": verify_method}
         raise HTTPException(status_code=401, detail=error_response)
     return user
@@ -190,7 +190,7 @@ async def get_current_user_and_token(
     token_code: Annotated[str | None, Depends(oauth2_code)] = None,
     token_client_credentials: Annotated[str | None, Depends(oauth2_client_credentials)] = None,
 ) -> UserAndToken:
-    """获取当前认证用户"""
+    """Get currently authenticated user"""
     token = token_pw or token_code or token_client_credentials
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
