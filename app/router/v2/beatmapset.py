@@ -277,7 +277,7 @@ async def search_beatmapset(
 
     # 解析 cursor[field] 格式的参数
     for k, v in params.items():
-        match = re.match(r"cursor\[(\w+)\]", k)
+        match = re.match(r"^cursor\[([a-zA-Z0-9_.]+)\]$", k)
         if match:
             field_name = match.group(1)
             field_value = v[0] if v else None
@@ -301,6 +301,9 @@ async def search_beatmapset(
                 except ValueError:
                     cursor[field_name] = field_value
 
+    if not cursor and query.cursor_string:
+        cursor = fetcher._decode_cursor(query.cursor_string)
+
     if (
         "recommended" in query.c
         or len(query.r) > 0
@@ -313,7 +316,9 @@ async def search_beatmapset(
         return SearchBeatmapsetsResp(total=0, beatmapsets=[])
 
     # 生成查询和游标的哈希用于缓存
-    query_hash = generate_hash(query.model_dump())
+    query_dump = query.model_dump()
+    query_dump.pop("cursor_string", None)
+    query_hash = generate_hash(query_dump)
     cursor_hash = generate_hash(cursor)
 
     # 尝试从缓存获取搜索结果

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from typing import Any
+
 from app.models.score import GameMode
 
 from pydantic import BaseModel, FieldSerializationInfo, field_serializer
@@ -16,7 +18,7 @@ class UTCBaseModel(BaseModel):
         return v
 
 
-Cursor = dict[str, int | float]
+Cursor = dict[str, Any]
 
 
 class RespWithCursor(BaseModel):

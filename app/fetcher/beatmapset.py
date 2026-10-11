@@ -161,6 +161,8 @@ class BeatmapsetFetcher(BaseFetcher):
         # 添加 cursor
         if cursor:
             cache_data["cursor"] = cursor
+        elif query.cursor_string:
+            cache_data["cursor_string"] = query.cursor_string
 
         # 序列化为 JSON 并生成 MD5 哈希
         cache_json = json.dumps(cache_data, sort_keys=True, separators=(",", ":"))
@@ -171,13 +173,13 @@ class BeatmapsetFetcher(BaseFetcher):
         return f"beatmapset:search:{cache_hash}"
 
     @staticmethod
-    def _encode_cursor(cursor_dict: dict[str, int | float]) -> str:
+    def _encode_cursor(cursor_dict: Cursor) -> str:
         """将cursor字典编码为base64字符串"""
         cursor_json = json.dumps(cursor_dict, separators=(",", ":"))
         return base64.b64encode(cursor_json.encode()).decode()
 
     @staticmethod
-    def _decode_cursor(cursor_string: str) -> dict[str, int | float]:
+    def _decode_cursor(cursor_string: str) -> Cursor:
         """将base64字符串解码为cursor字典"""
         try:
             cursor_json = base64.b64decode(cursor_string).decode()
@@ -345,11 +347,12 @@ class BeatmapsetFetcher(BaseFetcher):
         for own in ("is_local", "ai", "hide_local", "hide_ai"):
             params.pop(own, None)
 
-        if query.cursor_string:
-            params["cursor_string"] = query.cursor_string
-        else:
+        if cursor:
             for k, v in cursor.items():
                 params[f"cursor[{k}]"] = v
+            params.pop("cursor_string", None)
+        elif query.cursor_string:
+            params["cursor_string"] = query.cursor_string
 
         api_response = await self.request_api(
             "https://osu.ppy.sh/api/v2/beatmapsets/search",
