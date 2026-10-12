@@ -95,6 +95,85 @@ def _parse_list(v: Any):
     return v
 
 
+RANK_ALIAS = {
+    "SS": "X",
+    "SSH": "XH",
+}
+
+
+def _parse_ranks(v: Any):
+    if isinstance(v, str):
+        ranks = []
+        for item in v.split("."):
+            item_clean = item.strip().upper()
+            ranks.append(RANK_ALIAS.get(item_clean, item_clean))
+        return ranks
+    if isinstance(v, list):
+        return [RANK_ALIAS.get(str(item).strip().upper(), item) for item in v]
+    return v
+
+
+def _parse_played(v: Any) -> Literal["played", "unplayed"] | bool:
+    if v is None:
+        return False
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return bool(v)
+    if isinstance(v, str):
+        v_clean = v.strip().lower()
+        if v_clean in ("played", "true", "1"):
+            return "played"
+        if v_clean in ("unplayed",):
+            return "unplayed"
+        if v_clean in ("any", "all", "false", "0", ""):
+            return False
+    return False
+
+
+LANGUAGE_INT_TO_NAME = {
+    0: "any",
+    1: "unspecified",
+    2: "english",
+    3: "japanese",
+    4: "chinese",
+    5: "instrumental",
+    6: "korean",
+    7: "french",
+    8: "german",
+    9: "swedish",
+    10: "spanish",
+    11: "italian",
+    12: "russian",
+    13: "polish",
+    14: "other",
+}
+
+
+def _parse_language(v: Any) -> str:
+    if v is None:
+        return "any"
+    if isinstance(v, int):
+        return LANGUAGE_INT_TO_NAME.get(v, "any")
+    if isinstance(v, str):
+        v_clean = v.strip().lower()
+        if v_clean.isdigit():
+            return LANGUAGE_INT_TO_NAME.get(int(v_clean), "any")
+        if v_clean in LANGUAGE_INT_TO_NAME.values():
+            return v_clean
+    return "any"
+
+
+def _parse_genre(v: Any) -> int | None:
+    if v is None or v == "" or v == 0 or v == "0":
+        return None
+    try:
+        val = int(v)
+        return val if val != 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
 class SearchQueryModel(BaseModel):
     # model_config = ConfigDict(serialize_by_alias=True)
 
@@ -130,22 +209,25 @@ class SearchQueryModel(BaseModel):
             "pending 待定 / wip 制作中 / graveyard 坟场 / mine 我做的谱面"
         ),
     )
-    l: Literal[  # noqa: E741
-        "any",
-        "unspecified",
-        "english",
-        "japanese",
-        "chinese",
-        "instrumental",
-        "korean",
-        "french",
-        "german",
-        "swedish",
-        "spanish",
-        "italian",
-        "russian",
-        "polish",
-        "other",
+    l: Annotated[
+        Literal[  # noqa: E741
+            "any",
+            "unspecified",
+            "english",
+            "japanese",
+            "chinese",
+            "instrumental",
+            "korean",
+            "french",
+            "german",
+            "swedish",
+            "spanish",
+            "italian",
+            "russian",
+            "polish",
+            "other",
+        ],
+        BeforeValidator(_parse_language),
     ] = Field(
         default="any",
         description=(
@@ -155,6 +237,10 @@ class SearchQueryModel(BaseModel):
             "spanish 西班牙语 / italian 意大利语 / russian 俄语 / "
             "polish 波兰语 / other 其他"
         ),
+    )
+    g: Annotated[int | None, BeforeValidator(_parse_genre)] = Field(
+        default=None,
+        description="类别 ID (Genre IntEnum)",
     )
     sort: Literal[
         "title_asc",
@@ -190,12 +276,15 @@ class SearchQueryModel(BaseModel):
         BeforeValidator(_parse_list),
         PlainSerializer(lambda x: ".".join(x)),
     ] = Field(default_factory=list, description=("其他：video 有视频 / storyboard 有故事板"))
-    r: Annotated[list[Rank], BeforeValidator(_parse_list), PlainSerializer(lambda x: ".".join(x))] = Field(
+    r: Annotated[list[Rank], BeforeValidator(_parse_ranks), PlainSerializer(lambda x: ".".join(x))] = Field(
         default_factory=list, description="成绩"
     )
-    played: bool = Field(
+    played: Annotated[
+        Literal["played", "unplayed"] | bool,
+        BeforeValidator(_parse_played),
+    ] = Field(
         default=False,
-        description="玩过",
+        description="玩过状态：played 已玩 / unplayed 未玩 / false 未筛选",
     )
     nsfw: bool = Field(
         default=False,

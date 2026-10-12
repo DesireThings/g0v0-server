@@ -26,7 +26,7 @@ from app.dependencies.geoip import IPAddress, get_geoip_helper
 from app.dependencies.storage import StorageService
 from app.dependencies.user import ClientUser, get_optional_user
 from app.helpers.asset_proxy_helper import asset_proxy_response
-from app.models.beatmap import BeatmapRankStatus, Language, SearchQueryModel
+from app.models.beatmap import BeatmapRankStatus, Genre, Language, SearchQueryModel
 from app.models.score import GameMode
 from app.service.beatmapset_cache_service import generate_hash
 from app.utils import api_doc
@@ -135,9 +135,9 @@ async def _search_local_beatmapsets(
         elif "favourites" in query.s:
             stmt = stmt.where(
                 col(Beatmapset.id).in_(
-                    select(FavouriteBeatmapset.beatmapset_id).where(
-                        FavouriteBeatmapset.user_id == current_user.id
-                    )
+                    select(FavouriteBeatmapset.beatmapset_id)
+                    .where(FavouriteBeatmapset.user_id == current_user.id)
+                    .distinct()
                 )
             )
 
@@ -149,18 +149,40 @@ async def _search_local_beatmapsets(
                     Score.user_id == current_user.id,
                     col(Score.rank).in_(query.r),
                 )
+                .distinct()
             )
             stmt = stmt.where(col(Beatmapset.id).in_(score_ranks_subquery))
+        elif query.played == "unplayed":
+            played_score_subquery = (
+                select(Beatmap.beatmapset_id)
+                .join(Score, Score.beatmap_id == Beatmap.id)
+                .where(Score.user_id == current_user.id)
+                .distinct()
+            )
+            played_counts_subquery = (
+                select(Beatmap.beatmapset_id)
+                .join(BeatmapPlaycounts, BeatmapPlaycounts.beatmap_id == Beatmap.id)
+                .where(BeatmapPlaycounts.user_id == current_user.id)
+                .distinct()
+            )
+            stmt = stmt.where(
+                and_(
+                    ~col(Beatmapset.id).in_(played_score_subquery),
+                    ~col(Beatmapset.id).in_(played_counts_subquery),
+                )
+            )
         elif query.played:
             score_played_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(Score, Score.beatmap_id == Beatmap.id)
                 .where(Score.user_id == current_user.id)
+                .distinct()
             )
             counts_played_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(BeatmapPlaycounts, BeatmapPlaycounts.beatmap_id == Beatmap.id)
                 .where(BeatmapPlaycounts.user_id == current_user.id)
+                .distinct()
             )
             stmt = stmt.where(
                 or_(
@@ -170,9 +192,13 @@ async def _search_local_beatmapsets(
             )
 
         if "follows" in query.c:
-            followed_users_subquery = select(Relationship.target_id).where(
-                Relationship.user_id == current_user.id,
-                Relationship.type == RelationshipType.FOLLOW,
+            followed_users_subquery = (
+                select(Relationship.target_id)
+                .where(
+                    Relationship.user_id == current_user.id,
+                    Relationship.type == RelationshipType.FOLLOW,
+                )
+                .distinct()
             )
             stmt = stmt.where(col(Beatmapset.user_id).in_(followed_users_subquery))
 
@@ -210,6 +236,15 @@ async def _search_local_beatmapsets(
             lang_enum = Language[query.l.upper()]
             stmt = stmt.where(Beatmapset.beatmap_language == lang_enum)
         except KeyError:
+            pass
+
+    # Genre filter
+    if query.g is not None:
+        try:
+            genre_enum = Genre(query.g)
+            if genre_enum != Genre.ANY:
+                stmt = stmt.where(Beatmapset.beatmap_genre == genre_enum)
+        except (ValueError, KeyError):
             pass
 
     # Video and Storyboard
@@ -275,11 +310,11 @@ async def _search_local_beatmapsets(
 
     next_cursor = None
     cursor_string = None
-    if offset + len(beatmapsets) < total:
+    if beatmapsets and offset + len(beatmapsets) < total:
         next_cursor = {
-            "_id": beatmapsets[-1].id if beatmapsets else 0,
+            "_id": beatmapsets[-1].id,
             "offset": offset + len(beatmapsets),
-            "page": (offset // limit) + 2,
+            "page": ((offset + len(beatmapsets)) // limit) + 1,
         }
         if fetcher:
             cursor_string = fetcher._encode_cursor(next_cursor)
@@ -512,7 +547,7 @@ async def search_beatmapset(
     is_user_scoped = (
         "recommended" in query.c
         or len(query.r) > 0
-        or query.played
+        or bool(query.played)
         or "follows" in query.c
         or "mine" in query.s
         or "favourites" in query.s
