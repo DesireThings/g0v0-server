@@ -50,6 +50,10 @@ docker compose exec app uv run --no-sync g0v0-migrate upgrade-all
 docker compose down
 ```
 
+## Contributing
+
+See the [Contributing Guide](./CONTRIBUTING.md) for local development setup, coding guidelines, and PR workflow.
+
 ## License
 
 Licensed under GNU AGPLv3. See [LICENSE](./LICENSE) for details.  
