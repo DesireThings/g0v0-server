@@ -124,19 +124,35 @@ async def _search_local_beatmapsets(
         )
 
     # User-scoped filters
-    if current_user is not None:
+    if current_user is None:
+        if (
+            query.s in ("mine", "favourites")
+            or "follows" in query.c
+            or query.r
+            or query.played == "played"
+        ):
+            return SearchBeatmapsetsResp(
+                beatmapsets=[],
+                cursor=None,
+                cursor_string=None,
+                search=query,
+                total=0,
+            )
+    else:
+        user_id = current_user.id
+        user_name = current_user.username
         if "mine" in query.s:
             stmt = stmt.where(
                 or_(
-                    col(Beatmapset.user_id) == current_user.id,
-                    col(Beatmapset.creator) == current_user.username,
+                    col(Beatmapset.user_id) == user_id,
+                    col(Beatmapset.creator) == user_name,
                 )
             )
         elif "favourites" in query.s:
             stmt = stmt.where(
                 col(Beatmapset.id).in_(
                     select(FavouriteBeatmapset.beatmapset_id)
-                    .where(FavouriteBeatmapset.user_id == current_user.id)
+                    .where(FavouriteBeatmapset.user_id == user_id)
                     .distinct()
                 )
             )
@@ -146,7 +162,7 @@ async def _search_local_beatmapsets(
                 select(Beatmap.beatmapset_id)
                 .join(Score, Score.beatmap_id == Beatmap.id)
                 .where(
-                    Score.user_id == current_user.id,
+                    Score.user_id == user_id,
                     col(Score.rank).in_(query.r),
                 )
                 .distinct()
@@ -156,13 +172,13 @@ async def _search_local_beatmapsets(
             played_score_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(Score, Score.beatmap_id == Beatmap.id)
-                .where(Score.user_id == current_user.id)
+                .where(Score.user_id == user_id)
                 .distinct()
             )
             played_counts_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(BeatmapPlaycounts, BeatmapPlaycounts.beatmap_id == Beatmap.id)
-                .where(BeatmapPlaycounts.user_id == current_user.id)
+                .where(BeatmapPlaycounts.user_id == user_id)
                 .distinct()
             )
             stmt = stmt.where(
@@ -175,13 +191,13 @@ async def _search_local_beatmapsets(
             score_played_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(Score, Score.beatmap_id == Beatmap.id)
-                .where(Score.user_id == current_user.id)
+                .where(Score.user_id == user_id)
                 .distinct()
             )
             counts_played_subquery = (
                 select(Beatmap.beatmapset_id)
                 .join(BeatmapPlaycounts, BeatmapPlaycounts.beatmap_id == Beatmap.id)
-                .where(BeatmapPlaycounts.user_id == current_user.id)
+                .where(BeatmapPlaycounts.user_id == user_id)
                 .distinct()
             )
             stmt = stmt.where(
@@ -195,7 +211,7 @@ async def _search_local_beatmapsets(
             followed_users_subquery = (
                 select(Relationship.target_id)
                 .where(
-                    Relationship.user_id == current_user.id,
+                    Relationship.user_id == user_id,
                     Relationship.type == RelationshipType.FOLLOW,
                 )
                 .distinct()
