@@ -42,15 +42,14 @@ def effective_rank_status(status: BeatmapRankStatus) -> BeatmapRankStatus:
     Keep database status untouched; only normalize public representation so clients
     treat non-ranked maps as scoreable/pp maps without rewriting historical data.
     """
-    if settings.enable_all_beatmap_leaderboard or settings.enable_all_beatmap_pp:
-        if status in {
-            BeatmapRankStatus.GRAVEYARD,
-            BeatmapRankStatus.WIP,
-            BeatmapRankStatus.PENDING,
-            BeatmapRankStatus.QUALIFIED,
-            BeatmapRankStatus.LOVED,
-        }:
-            return BeatmapRankStatus.APPROVED
+    if (settings.enable_all_beatmap_leaderboard or settings.enable_all_beatmap_pp) and status in {
+        BeatmapRankStatus.GRAVEYARD,
+        BeatmapRankStatus.WIP,
+        BeatmapRankStatus.PENDING,
+        BeatmapRankStatus.QUALIFIED,
+        BeatmapRankStatus.LOVED,
+    }:
+        return BeatmapRankStatus.APPROVED
     return status
 
 
@@ -91,7 +90,15 @@ class Language(IntEnum):
 
 def _parse_list(v: Any):
     if isinstance(v, str):
-        return v.split(".")
+        return [part.strip() for part in v.split(".") if part.strip()]
+    if isinstance(v, list):
+        res = []
+        for item in v:
+            if isinstance(item, str) and "." in item:
+                res.extend([part.strip() for part in item.split(".") if part.strip()])
+            else:
+                res.append(item)
+        return res
     return v
 
 
@@ -106,10 +113,21 @@ def _parse_ranks(v: Any):
         ranks = []
         for item in v.split("."):
             item_clean = item.strip().upper()
-            ranks.append(RANK_ALIAS.get(item_clean, item_clean))
+            if item_clean:
+                ranks.append(RANK_ALIAS.get(item_clean, item_clean))
         return ranks
     if isinstance(v, list):
-        return [RANK_ALIAS.get(str(item).strip().upper(), item) for item in v]
+        ranks = []
+        for item in v:
+            if isinstance(item, str) and "." in item:
+                for sub in item.split("."):
+                    sub_clean = sub.strip().upper()
+                    if sub_clean:
+                        ranks.append(RANK_ALIAS.get(sub_clean, sub_clean))
+            else:
+                item_clean = str(item).strip().upper()
+                ranks.append(RANK_ALIAS.get(item_clean, item))
+        return ranks
     return v
 
 
@@ -177,7 +195,7 @@ def _parse_genre(v: Any) -> int | None:
 class SearchQueryModel(BaseModel):
     # model_config = ConfigDict(serialize_by_alias=True)
 
-    q: str = Field("", description="搜索关键词")
+    q: str = Field(default="", description="搜索关键词")
     c: Annotated[
         list[Literal["recommended", "converts", "follows", "spotlights", "featured_artists"]],
         BeforeValidator(_parse_list),
@@ -189,7 +207,7 @@ class SearchQueryModel(BaseModel):
             "spotlights 聚光灯谱面 / featured_artists 精选艺术家"
         ),
     )
-    m: int | None = Field(None, description="模式", alias="m")
+    m: int | None = Field(default=None, description="模式", alias="m")
     s: Literal[
         "any",
         "leaderboard",
@@ -209,8 +227,8 @@ class SearchQueryModel(BaseModel):
             "pending 待定 / wip 制作中 / graveyard 坟场 / mine 我做的谱面"
         ),
     )
-    l: Annotated[
-        Literal[  # noqa: E741
+    l: Annotated[  # noqa: E741
+        Literal[
             "any",
             "unspecified",
             "english",

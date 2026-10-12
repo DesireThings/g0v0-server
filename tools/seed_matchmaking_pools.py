@@ -95,14 +95,14 @@ def _connect():
     url = settings.database_url
     # Pydantic Url object → str
     if hasattr(url, "unicode_string"):
-        url = url.unicode_string()
+        url = getattr(url, "unicode_string")()
     url = str(url).replace("mysql+aiomysql://", "mysql://").replace("mysql+pymysql://", "mysql://")
     parsed = urlparse(url)
     return pymysql.connect(
         host=parsed.hostname,
         port=parsed.port or 3306,
         user=parsed.username,
-        password=parsed.password,
+        password=parsed.password or "",
         database=parsed.path.lstrip("/"),
         cursorclass=DictCursor,
         autocommit=False,
